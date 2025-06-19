@@ -43,7 +43,9 @@ import {
   getLoadDistributionReport,
   getComplianceReport,
   exportMonitoringSheet,
+  getSections,
 } from '../services/api';
+import * as XLSX from 'xlsx';
 
 interface LoadDistribution {
   facultyId: string;
@@ -75,10 +77,26 @@ interface ComplianceReport {
   };
 }
 
+interface SectionReportData {
+  subjectCode: string;
+  description: string;
+  lecHours: number;
+  labHours: number;
+  totalHours: number;
+  units: number;
+  section: string;
+  roomNo: string;
+  day: string;
+  startTime: string;
+  endTime: string;
+  faculty: string;
+}
+
 const Reports: React.FC = () => {
   const [selectedTab, setSelectedTab] = useState(0);
   const [loadDistribution, setLoadDistribution] = useState<LoadDistribution[]>([]);
   const [complianceReport, setComplianceReport] = useState<ComplianceReport | null>(null);
+  const [sectionReportData, setSectionReportData] = useState<SectionReportData[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
@@ -89,6 +107,8 @@ const Reports: React.FC = () => {
       fetchLoadDistribution();
     } else if (selectedTab === 1) {
       fetchComplianceReport();
+    } else if (selectedTab === 2) {
+      fetchSectionReport();
     }
   }, [selectedTab]);
 
@@ -118,6 +138,46 @@ const Reports: React.FC = () => {
     }
   };
 
+  const fetchSectionReport = async () => {
+    try {
+      setLoading(true);
+      const sections = await getSections();
+      
+      // Transform section data to match the required columns
+      const reportData: SectionReportData[] = sections.map((section: any) => {
+        const timeSlots = section.timeSlots || [];
+        const primaryTimeSlot = timeSlots[0] || {};
+        
+        return {
+          subjectCode: section.course?.code || '',
+          description: section.course?.name || '',
+          lecHours: section.lectureHours || 0,
+          labHours: section.laboratoryHours || 0,
+          totalHours: (section.lectureHours || 0) + (section.laboratoryHours || 0),
+          units: section.course?.credits || 0,
+          section: section.sectionCode || '',
+          roomNo: section.room || 'TBA',
+          day: primaryTimeSlot.dayOfWeek ? getDayName(primaryTimeSlot.dayOfWeek) : '',
+          startTime: primaryTimeSlot.startTime || '',
+          endTime: primaryTimeSlot.endTime || '',
+          faculty: section.faculty ? `${section.faculty.firstName} ${section.faculty.lastName}` : 'Unassigned'
+        };
+      });
+      
+      setSectionReportData(reportData);
+      setError('');
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Failed to fetch section report');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getDayName = (dayOfWeek: number) => {
+    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    return days[dayOfWeek] || '';
+  };
+
   const handleExportMonitoringSheet = async () => {
     try {
       const blob = await exportMonitoringSheet();
@@ -130,6 +190,60 @@ const Reports: React.FC = () => {
       link.remove();
     } catch (err: any) {
       setError('Failed to export monitoring sheet');
+    }
+  };
+
+  const handleExportSectionReport = () => {
+    try {
+      // Create workbook and worksheet
+      const wb = XLSX.utils.book_new();
+      
+      // Convert data to Excel format
+      const ws_data = [
+        ['Subject Code', 'Description', 'Lec Hours', 'Lab Hours', 'Total Hours', 'Units', 'Section', 'Room No.', 'Day', 'Start Time', 'End Time', 'Faculty'],
+        ...sectionReportData.map(row => [
+          row.subjectCode,
+          row.description,
+          row.lecHours,
+          row.labHours,
+          row.totalHours,
+          row.units,
+          row.section,
+          row.roomNo,
+          row.day,
+          row.startTime,
+          row.endTime,
+          row.faculty
+        ])
+      ];
+      
+      const ws = XLSX.utils.aoa_to_sheet(ws_data);
+      
+      // Set column widths
+      ws['!cols'] = [
+        { wch: 12 }, // Subject Code
+        { wch: 30 }, // Description
+        { wch: 10 }, // Lec Hours
+        { wch: 10 }, // Lab Hours
+        { wch: 12 }, // Total Hours
+        { wch: 8 },  // Units
+        { wch: 12 }, // Section
+        { wch: 10 }, // Room No.
+        { wch: 12 }, // Day
+        { wch: 12 }, // Start Time
+        { wch: 12 }, // End Time
+        { wch: 20 }  // Faculty
+      ];
+      
+      XLSX.utils.book_append_sheet(wb, ws, 'Section Report');
+      
+      // Generate filename with current date
+      const today = new Date();
+      const filename = `Section_Report_${today.getFullYear()}-${(today.getMonth() + 1).toString().padStart(2, '0')}-${today.getDate().toString().padStart(2, '0')}.xlsx`;
+      
+      XLSX.writeFile(wb, filename);
+    } catch (err) {
+      setError('Failed to export section report');
     }
   };
 
@@ -156,7 +270,7 @@ const Reports: React.FC = () => {
       Regular: 30, // 21 regular + 9 extra
       PartTime: 12, // 12 regular + 0 extra
       Temporary: 30, // 21 regular + 9 extra
-      Designee: 24, // 18 regular + 6 extra
+      Designee: 15, // 9 regular + 6 extra
     };
     return limits[type as keyof typeof limits] || 0;
   };
@@ -165,6 +279,140 @@ const Reports: React.FC = () => {
     setSelectedDetails(violations);
     setDetailsDialogOpen(true);
   };
+
+  const renderSectionReport = () => (
+    <Box>
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+        <Typography variant="h5">
+          Section Report
+        </Typography>
+        <Button
+          variant="outlined"
+          startIcon={<DownloadIcon />}
+          onClick={handleExportSectionReport}
+          disabled={sectionReportData.length === 0}
+        >
+          Export to Excel
+        </Button>
+      </Box>
+
+      {/* Summary Cards */}
+      <Grid container spacing={3} sx={{ mb: 3 }}>
+        <Grid item xs={12} sm={6} md={3}>
+          <Card>
+            <CardContent>
+              <Box display="flex" alignItems="center">
+                <SchoolIcon color="primary" sx={{ mr: 2 }} />
+                <Box>
+                  <Typography variant="h6">{sectionReportData.length}</Typography>
+                  <Typography variant="body2" color="textSecondary">
+                    Total Sections
+                  </Typography>
+                </Box>
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <Card>
+            <CardContent>
+              <Box display="flex" alignItems="center">
+                <PeopleIcon color="success" sx={{ mr: 2 }} />
+                <Box>
+                  <Typography variant="h6">
+                    {sectionReportData.filter(s => s.faculty !== 'Unassigned').length}
+                  </Typography>
+                  <Typography variant="body2" color="textSecondary">
+                    Assigned Sections
+                  </Typography>
+                </Box>
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <Card>
+            <CardContent>
+              <Box display="flex" alignItems="center">
+                <WarningIcon color="warning" sx={{ mr: 2 }} />
+                <Box>
+                  <Typography variant="h6">
+                    {sectionReportData.filter(s => s.faculty === 'Unassigned').length}
+                  </Typography>
+                  <Typography variant="body2" color="textSecondary">
+                    Unassigned Sections
+                  </Typography>
+                </Box>
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <Card>
+            <CardContent>
+              <Box display="flex" alignItems="center">
+                <ScheduleIcon color="info" sx={{ mr: 2 }} />
+                <Box>
+                  <Typography variant="h6">
+                    {sectionReportData.reduce((sum, s) => sum + s.totalHours, 0)}
+                  </Typography>
+                  <Typography variant="body2" color="textSecondary">
+                    Total Hours
+                  </Typography>
+                </Box>
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
+
+      {/* Section Report Table */}
+      <TableContainer component={Paper}>
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableCell>Subject Code</TableCell>
+              <TableCell>Description</TableCell>
+              <TableCell align="center">Lec Hours</TableCell>
+              <TableCell align="center">Lab Hours</TableCell>
+              <TableCell align="center">Total Hours</TableCell>
+              <TableCell align="center">Units</TableCell>
+              <TableCell>Section</TableCell>
+              <TableCell>Room No.</TableCell>
+              <TableCell>Day</TableCell>
+              <TableCell>Start Time</TableCell>
+              <TableCell>End Time</TableCell>
+              <TableCell>Faculty</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {sectionReportData.map((row, index) => (
+              <TableRow key={index}>
+                <TableCell>{row.subjectCode}</TableCell>
+                <TableCell>{row.description}</TableCell>
+                <TableCell align="center">{row.lecHours}</TableCell>
+                <TableCell align="center">{row.labHours}</TableCell>
+                <TableCell align="center">{row.totalHours}</TableCell>
+                <TableCell align="center">{row.units}</TableCell>
+                <TableCell>{row.section}</TableCell>
+                <TableCell>{row.roomNo}</TableCell>
+                <TableCell>{row.day}</TableCell>
+                <TableCell>{row.startTime}</TableCell>
+                <TableCell>{row.endTime}</TableCell>
+                <TableCell>
+                  <Chip
+                    label={row.faculty}
+                    color={row.faculty === 'Unassigned' ? 'error' : 'success'}
+                    size="small"
+                  />
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
+    </Box>
+  );
 
   const renderLoadDistributionReport = () => (
     <Box>
@@ -502,18 +750,14 @@ const Reports: React.FC = () => {
         <Tabs value={selectedTab} onChange={(e, newValue) => setSelectedTab(newValue)}>
           <Tab label="Load Distribution" />
           <Tab label="Compliance Report" />
-          <Tab label="ITEES Summary" disabled />
+          <Tab label="Section Report" />
           <Tab label="Department Analysis" disabled />
         </Tabs>
       </Box>
 
       {selectedTab === 0 && renderLoadDistributionReport()}
       {selectedTab === 1 && renderComplianceReport()}
-      {selectedTab === 2 && (
-        <Typography variant="body1" color="textSecondary">
-          ITEES Summary report - Coming soon
-        </Typography>
-      )}
+      {selectedTab === 2 && renderSectionReport()}
       {selectedTab === 3 && (
         <Typography variant="body1" color="textSecondary">
           Department Analysis report - Coming soon

@@ -50,6 +50,16 @@ export const updateFaculty = async (id: string, data: any) => {
   return response.data;
 };
 
+export const deleteFaculty = async (id: string) => {
+  const response = await api.delete(`/faculty/${id}`);
+  return response.data;
+};
+
+export const forceDeleteFaculty = async (id: string) => {
+  const response = await api.delete(`/faculty/${id}/force`);
+  return response.data;
+};
+
 // Course API
 export const getCourses = async () => {
   const response = await api.get('/courses');
@@ -79,6 +89,11 @@ export const validateAssignment = async (data: any) => {
 
 export const approveAssignment = async (id: string) => {
   const response = await api.post(`/assignments/${id}/approve`);
+  return response.data;
+};
+
+export const updateAssignment = async (id: string, data: any) => {
+  const response = await api.put(`/assignments/${id}`, data);
   return response.data;
 };
 

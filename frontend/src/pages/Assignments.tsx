@@ -51,6 +51,7 @@ import {
   createAssignment,
   validateAssignment,
   approveAssignment,
+  updateAssignment,
   getFaculty,
   getCourses,
 } from '../services/api';
@@ -81,6 +82,8 @@ interface Assignment {
   room?: string;
   creditHours: number;
   contactHours: number;
+  lectureHours?: number;
+  laboratoryHours?: number;
   approvedBy?: string;
   approvedAt?: string;
   notes?: string;
@@ -123,6 +126,8 @@ interface AssignmentFormData {
   academicYear: string;
   section?: string;
   room?: string;
+  lectureHours?: number;
+  laboratoryHours?: number;
   notes?: string;
 }
 
@@ -133,6 +138,8 @@ const Assignments: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editingAssignment, setEditingAssignment] = useState<Assignment | null>(null);
   const [activeStep, setActiveStep] = useState(0);
   const [validationResult, setValidationResult] = useState<any>(null);
   const [selectedFaculty, setSelectedFaculty] = useState<Faculty | null>(null);
@@ -324,6 +331,51 @@ const Assignments: React.FC = () => {
     }
   };
 
+  const handleEditClick = (assignment: Assignment) => {
+    setEditingAssignment(assignment);
+    reset({
+      facultyId: assignment.facultyId,
+      courseId: assignment.courseId,
+      type: assignment.type,
+      dayOfWeek: assignment.timeSlot.dayOfWeek,
+      startTime: assignment.timeSlot.startTime,
+      endTime: assignment.timeSlot.endTime,
+      semester: assignment.semester,
+      academicYear: assignment.academicYear,
+      lectureHours: assignment.lectureHours || 0,
+      laboratoryHours: assignment.laboratoryHours || 0,
+      notes: '',
+    });
+    setEditDialogOpen(true);
+  };
+
+  const handleEditClose = () => {
+    setEditDialogOpen(false);
+    setEditingAssignment(null);
+  };
+
+  const handleEditSubmit = async (data: AssignmentFormData) => {
+    if (!editingAssignment) return;
+    
+    try {
+      const assignmentData = {
+        ...data,
+        timeSlot: {
+          dayOfWeek: data.dayOfWeek,
+          startTime: data.startTime,
+          endTime: data.endTime,
+        },
+      };
+      
+      await updateAssignment(editingAssignment.id, assignmentData);
+      await fetchData();
+      handleEditClose();
+      setError('');
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Failed to update assignment');
+    }
+  };
+
   const getStatusColor = (status: string) => {
     const colors = {
       Proposed: 'warning',
@@ -357,7 +409,7 @@ const Assignments: React.FC = () => {
       Regular: { regular: 21, extra: 9 },
       PartTime: { regular: 12, extra: 0 },
       Temporary: { regular: 21, extra: 9 },
-      Designee: { regular: 18, extra: 6 },
+      Designee: { regular: 9, extra: 6 },
     };
     return limits[type as keyof typeof limits] || { regular: 0, extra: 0 };
   };
@@ -570,6 +622,7 @@ const Assignments: React.FC = () => {
                   <IconButton
                     size="small"
                     sx={{ ml: 1 }}
+                    onClick={() => handleEditClick(assignment)}
                   >
                     <EditIcon />
                   </IconButton>
@@ -1054,6 +1107,269 @@ const Assignments: React.FC = () => {
           </DialogContent>
           <DialogActions>
             <Button onClick={handleCloseDialog}>Cancel</Button>
+          </DialogActions>
+        </form>
+      </Dialog>
+
+      {/* Edit Assignment Dialog */}
+      <Dialog open={editDialogOpen} onClose={handleEditClose} maxWidth="md" fullWidth>
+        <form onSubmit={handleSubmit(handleEditSubmit)}>
+          <DialogTitle>Edit Assignment</DialogTitle>
+          <DialogContent>
+            <Grid container spacing={2} sx={{ mt: 1 }}>
+              <Grid item xs={12} md={6}>
+                <Controller
+                  name="facultyId"
+                  control={control}
+                  defaultValue={editingAssignment?.facultyId || ''}
+                  rules={{ required: 'Faculty is required' }}
+                  render={({ field }) => (
+                    <Autocomplete
+                      {...field}
+                      options={facultyList}
+                      getOptionLabel={(option) => option.label || ''}
+                      value={facultyList.find(f => f.id === field.value) || null}
+                      onChange={(_, newValue) => {
+                        field.onChange(newValue?.id || '');
+                      }}
+                      renderInput={(params) => (
+                        <TextField
+                          {...params}
+                          label="Faculty"
+                          required
+                          error={!!errors.facultyId}
+                          helperText={errors.facultyId?.message}
+                        />
+                      )}
+                    />
+                  )}
+                />
+              </Grid>
+
+              <Grid item xs={12} md={6}>
+                <Controller
+                  name="courseId"
+                  control={control}
+                  defaultValue={editingAssignment?.courseId || ''}
+                  rules={{ required: 'Course is required' }}
+                  render={({ field }) => (
+                    <Autocomplete
+                      {...field}
+                      options={courseList}
+                      getOptionLabel={(option) => option.label || ''}
+                      value={courseList.find(c => c.id === field.value) || null}
+                      onChange={(_, newValue) => {
+                        field.onChange(newValue?.id || '');
+                      }}
+                      renderInput={(params) => (
+                        <TextField
+                          {...params}
+                          label="Course"
+                          required
+                          error={!!errors.courseId}
+                          helperText={errors.courseId?.message}
+                        />
+                      )}
+                    />
+                  )}
+                />
+              </Grid>
+
+              <Grid item xs={12} md={6}>
+                <Controller
+                  name="type"
+                  control={control}
+                  defaultValue={editingAssignment?.type || 'Regular'}
+                  rules={{ required: 'Type is required' }}
+                  render={({ field }) => (
+                    <TextField
+                      {...field}
+                      select
+                      fullWidth
+                      label="Assignment Type"
+                      error={!!errors.type}
+                      helperText={errors.type?.message}
+                    >
+                      <MenuItem value="Regular">Regular</MenuItem>
+                      <MenuItem value="Extra">Extra</MenuItem>
+                      <MenuItem value="OJT">OJT</MenuItem>
+                      <MenuItem value="Seminar">Seminar</MenuItem>
+                    </TextField>
+                  )}
+                />
+              </Grid>
+
+              <Grid item xs={12} md={6}>
+                <Controller
+                  name="dayOfWeek"
+                  control={control}
+                  defaultValue={editingAssignment?.timeSlot?.dayOfWeek || 1}
+                  rules={{ required: 'Day is required' }}
+                  render={({ field }) => (
+                    <TextField
+                      {...field}
+                      select
+                      fullWidth
+                      label="Day of Week"
+                      error={!!errors.dayOfWeek}
+                      helperText={errors.dayOfWeek?.message}
+                    >
+                      <MenuItem value={1}>Monday</MenuItem>
+                      <MenuItem value={2}>Tuesday</MenuItem>
+                      <MenuItem value={3}>Wednesday</MenuItem>
+                      <MenuItem value={4}>Thursday</MenuItem>
+                      <MenuItem value={5}>Friday</MenuItem>
+                      <MenuItem value={6}>Saturday</MenuItem>
+                    </TextField>
+                  )}
+                />
+              </Grid>
+
+              <Grid item xs={12} md={6}>
+                <Controller
+                  name="startTime"
+                  control={control}
+                  defaultValue={editingAssignment?.timeSlot?.startTime || ''}
+                  rules={{ required: 'Start time is required' }}
+                  render={({ field }) => (
+                    <TextField
+                      {...field}
+                      fullWidth
+                      type="time"
+                      label="Start Time"
+                      InputLabelProps={{ shrink: true }}
+                      error={!!errors.startTime}
+                      helperText={errors.startTime?.message}
+                    />
+                  )}
+                />
+              </Grid>
+
+              <Grid item xs={12} md={6}>
+                <Controller
+                  name="endTime"
+                  control={control}
+                  defaultValue={editingAssignment?.timeSlot?.endTime || ''}
+                  rules={{ required: 'End time is required' }}
+                  render={({ field }) => (
+                    <TextField
+                      {...field}
+                      fullWidth
+                      type="time"
+                      label="End Time"
+                      InputLabelProps={{ shrink: true }}
+                      error={!!errors.endTime}
+                      helperText={errors.endTime?.message}
+                    />
+                  )}
+                />
+              </Grid>
+
+              <Grid item xs={12} md={6}>
+                <Controller
+                  name="semester"
+                  control={control}
+                  defaultValue={editingAssignment?.semester || 'First'}
+                  rules={{ required: 'Semester is required' }}
+                  render={({ field }) => (
+                    <TextField
+                      {...field}
+                      select
+                      fullWidth
+                      label="Semester"
+                      error={!!errors.semester}
+                      helperText={errors.semester?.message}
+                    >
+                      <MenuItem value="First">First</MenuItem>
+                      <MenuItem value="Second">Second</MenuItem>
+                      <MenuItem value="Summer">Summer</MenuItem>
+                    </TextField>
+                  )}
+                />
+              </Grid>
+
+              <Grid item xs={12} md={6}>
+                <Controller
+                  name="academicYear"
+                  control={control}
+                  defaultValue={editingAssignment?.academicYear || '2025-2026'}
+                  rules={{ required: 'Academic year is required' }}
+                  render={({ field }) => (
+                    <TextField
+                      {...field}
+                      select
+                      fullWidth
+                      label="Academic Year"
+                      error={!!errors.academicYear}
+                      helperText={errors.academicYear?.message}
+                    >
+                      <MenuItem value="2024-2025">2024-2025</MenuItem>
+                      <MenuItem value="2025-2026">2025-2026</MenuItem>
+                    </TextField>
+                  )}
+                />
+              </Grid>
+
+              <Grid item xs={12} md={6}>
+                <Controller
+                  name="lectureHours"
+                  control={control}
+                  defaultValue={0}
+                  render={({ field }) => (
+                    <TextField
+                      {...field}
+                      fullWidth
+                      type="number"
+                      label="Lecture Hours"
+                      inputProps={{ min: 0, step: 0.5 }}
+                      helperText="Hours allocated for lecture component"
+                    />
+                  )}
+                />
+              </Grid>
+
+              <Grid item xs={12} md={6}>
+                <Controller
+                  name="laboratoryHours"
+                  control={control}
+                  defaultValue={0}
+                  render={({ field }) => (
+                    <TextField
+                      {...field}
+                      fullWidth
+                      type="number"
+                      label="Laboratory Hours"
+                      inputProps={{ min: 0, step: 0.5 }}
+                      helperText="Hours allocated for laboratory component"
+                    />
+                  )}
+                />
+              </Grid>
+
+              <Grid item xs={12}>
+                <Controller
+                  name="notes"
+                  control={control}
+                  defaultValue=""
+                  render={({ field }) => (
+                    <TextField
+                      {...field}
+                      fullWidth
+                      multiline
+                      rows={3}
+                      label="Notes (Optional)"
+                      placeholder="Any additional notes or special requirements..."
+                    />
+                  )}
+                />
+              </Grid>
+            </Grid>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={handleEditClose}>Cancel</Button>
+            <Button type="submit" variant="contained" color="primary">
+              Update Assignment
+            </Button>
           </DialogActions>
         </form>
       </Dialog>

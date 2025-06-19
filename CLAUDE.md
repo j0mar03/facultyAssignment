@@ -151,7 +151,11 @@ faculty-load-management/
   - Regular Faculty: 21 regular + 9 extra hours
   - Part-Time: 12 regular hours only
   - Temporary: 21 regular + 9 extra hours
-  - Designee: 18 regular + 6 extra hours
+  - Designee: 9 regular + 6 extra hours (corrected limit)
+- **Time-Based Load Categorization**: Implemented for Designee faculty
+  - Regular hours: 9am-6pm weekdays (9 hours limit)
+  - Extra load: 7:30am-9am and 6pm-9pm weekdays
+  - Temporary substitution: Saturday/Sunday assignments
 - **ITEES-Based Restrictions**: Automatic extra load blocking for low-rated faculty
 - **Time Slot Constraints**: Enforced university scheduling policies
 - **Night Class Requirements**: Mandatory evening section validation
@@ -346,6 +350,10 @@ VITE_API_URL=http://localhost:5000/api
 10. **Real-time Assignment**: Click-to-assign interface with conflict detection and room management
 11. **Database Integration**: Automatic seeding with real DCPET course data and faculty information
 12. **Integer Load Fix**: Resolved decimal-to-integer conversion issues for faculty load calculations
+13. **Time-Based Load Categorization**: Implemented designee faculty load calculation based on time slots
+14. **Multi-Time Slot Calendar**: Fixed faculty schedule display to show all time slots for sections
+15. **Section Filtering**: Added comprehensive filtering by section, course, and faculty in sections list
+16. **Complete DCPET Schedule Updates**: Updated all three DCPET sections (1-1, 1-2, 1-3) with new 2025-2026 curriculum
 
 ### 🔄 System Architecture
 - **Backend**: Node.js + Express + TypeScript + TypeORM + PostgreSQL
@@ -359,12 +367,13 @@ VITE_API_URL=http://localhost:5000/api
   - 6 Regular Faculty (including 2 Designees with administrative positions)
   - 9 Part-Time Faculty
   - 5 Temporary Faculty (including 1 Casual mapped to Temporary)
-- **Real DCPET Course Schedules**: Academic year 2025-2026 First semester
-  - **DCPET 1-1**: 8 courses with complete time slots and room assignments
-  - **DCPET 1-2**: 8 courses with time slots and room assignments
-  - **DCPET 1-3**: 8 courses with time slots and room assignments
-  - Night sections properly identified (4:30 PM - 9:00 PM classes)
-- **Section Management**: 24+ sections ready for faculty assignment
+- **Real DCPET Course Schedules**: Academic year 2025-2026 First semester (Updated December 2024)
+  - **DCPET 1-1**: 9 courses including CHEM 015, CMPE 102, MATH 101, CPET 102, PATHFIT 1, CWTS 001, ROTC 001, CMPE 105, ENSC 013
+  - **DCPET 1-2**: 9 courses with comprehensive time slots and room assignments
+  - **DCPET 1-3**: 9 courses with complete schedule implementation
+  - Night sections properly identified (6:00 PM - 9:00 PM classes)
+  - Multi-time slot support for courses with lab and lecture components
+- **Section Management**: 27 sections (9 per DCPET section) ready for faculty assignment
 - **ITEES Records**: Performance evaluation history for faculty
 - **User Accounts**: Admin, Chair (Frescian C. Ruiz), Dean, and Faculty (Jomar B. Ruiz) access levels
 

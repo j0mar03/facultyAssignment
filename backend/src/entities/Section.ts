@@ -70,6 +70,12 @@ export class Section {
   @Column('boolean', { default: false })
   isNightSection!: boolean;
 
+  @Column('decimal', { precision: 3, scale: 1, default: 0 })
+  lectureHours!: number;
+
+  @Column('decimal', { precision: 3, scale: 1, default: 0 })
+  laboratoryHours!: number;
+
   @Column('text', { nullable: true })
   notes?: string;
 

@@ -9,7 +9,7 @@ export class ConstraintService {
     Regular: { regular: 21, extra: 9 },
     PartTime: { regular: 12, extra: 0 },
     Temporary: { regular: 21, extra: 9 },
-    Designee: { regular: 18, extra: 6 },
+    Designee: { regular: 9, extra: 6 },
   };
 
   private static readonly ITEES_LOAD_MATRIX = {
@@ -27,8 +27,14 @@ export class ConstraintService {
     timeSlot: TimeSlot,
     existingAssignments: Assignment[]
   ): { valid: boolean; reason?: string } {
+    // For designees, determine the actual load type based on time slot
+    let actualLoadType = loadType;
+    if (faculty.type === 'Designee') {
+      actualLoadType = this.determineDesigneeLoadType(timeSlot);
+    }
+
     // Check ITEES restrictions
-    if (faculty.consecutiveLowRatings >= 2 && loadType === 'Extra') {
+    if (faculty.consecutiveLowRatings >= 2 && actualLoadType === 'Extra') {
       return {
         valid: false,
         reason: 'Faculty has 2+ consecutive satisfactory or lower ratings. Cannot assign extra load.',
@@ -39,14 +45,14 @@ export class ConstraintService {
     const loadLimits = this.LOAD_LIMITS[faculty.type];
     const currentLoad = this.calculateCurrentLoad(faculty, existingAssignments);
 
-    if (loadType === 'Regular' && currentLoad.regular + course.credits > loadLimits.regular) {
+    if (actualLoadType === 'Regular' && currentLoad.regular + course.contactHours > loadLimits.regular) {
       return {
         valid: false,
         reason: `Regular load limit exceeded. Current: ${currentLoad.regular}, Limit: ${loadLimits.regular}`,
       };
     }
 
-    if (loadType === 'Extra' && currentLoad.extra + course.credits > loadLimits.extra) {
+    if (actualLoadType === 'Extra' && currentLoad.extra + course.contactHours > loadLimits.extra) {
       return {
         valid: false,
         reason: `Extra load limit exceeded. Current: ${currentLoad.extra}, Limit: ${loadLimits.extra}`,
@@ -54,7 +60,7 @@ export class ConstraintService {
     }
 
     // Check time slot constraints
-    const timeSlotValid = this.isTimeSlotValid(faculty, loadType, timeSlot);
+    const timeSlotValid = this.isTimeSlotValid(faculty, actualLoadType, timeSlot);
     if (!timeSlotValid.valid) {
       return timeSlotValid;
     }
@@ -85,12 +91,35 @@ export class ConstraintService {
   ): { regular: number; extra: number } {
     const facultyAssignments = assignments.filter(a => a.facultyId === faculty.id && a.status !== 'Completed');
     
-    return facultyAssignments.reduce(
+    // Group assignments by course+section to avoid counting duplicate records
+    const uniqueAssignments = new Map();
+    
+    for (const assignment of facultyAssignments) {
+      const key = `${assignment.courseId}-${assignment.section || 'no-section'}`;
+      
+      if (!uniqueAssignments.has(key)) {
+        uniqueAssignments.set(key, assignment);
+      }
+    }
+
+    // Calculate load based on unique assignments only
+    return Array.from(uniqueAssignments.values()).reduce(
       (acc, assignment) => {
-        if (assignment.type === 'Regular') {
-          acc.regular += assignment.creditHours;
-        } else if (assignment.type === 'Extra') {
-          acc.extra += assignment.creditHours;
+        // For designees, determine load type based on time slot
+        if (faculty.type === 'Designee') {
+          const loadType = this.determineDesigneeLoadType(assignment.timeSlot);
+          if (loadType === 'Regular') {
+            acc.regular += assignment.contactHours;
+          } else if (loadType === 'Extra') {
+            acc.extra += assignment.contactHours;
+          }
+        } else {
+          // For non-designees, use the assignment type
+          if (assignment.type === 'Regular') {
+            acc.regular += assignment.contactHours;
+          } else if (assignment.type === 'Extra') {
+            acc.extra += assignment.contactHours;
+          }
         }
         return acc;
       },
@@ -98,13 +127,48 @@ export class ConstraintService {
     );
   }
 
+  /**
+   * Determine load type for designee faculty based on time slot
+   * - 9am-6pm = regular hours
+   * - 7:30am-9am and 6pm-9pm = part-time hours (counted as extra)
+   * - Saturday = temporary substitution (counted as extra)
+   */
+  private static determineDesigneeLoadType(timeSlot: TimeSlot): LoadType {
+    const startHour = this.timeToDecimalHours(timeSlot.startTime);
+    const endHour = this.timeToDecimalHours(timeSlot.endTime);
+    const dayOfWeek = timeSlot.dayOfWeek;
+
+    // Saturday classes = temporary substitution (extra load)
+    if (dayOfWeek === 6) {
+      return 'Extra';
+    }
+
+    // Check if time falls within regular hours (9am-6pm)
+    const isWithinRegularHours = startHour >= 9.0 && endHour <= 18.0;
+    
+    if (isWithinRegularHours) {
+      return 'Regular';
+    }
+
+    // Check if time falls within part-time hours (7:30am-9am or 6pm-9pm)
+    const isEarlyPartTime = startHour >= 7.5 && endHour <= 9.0;
+    const isEveningPartTime = startHour >= 18.0 && endHour <= 21.0;
+    
+    if (isEarlyPartTime || isEveningPartTime) {
+      return 'Extra'; // Part-time hours counted as extra load
+    }
+
+    // Default to regular if doesn't fit other categories
+    return 'Regular';
+  }
+
   private static isTimeSlotValid(
     faculty: Faculty,
     loadType: LoadType,
     timeSlot: TimeSlot
   ): { valid: boolean; reason?: string } {
-    const startHour = parseInt(timeSlot.startTime.split(':')[0]);
-    const endHour = parseInt(timeSlot.endTime.split(':')[0]);
+    const startHour = this.timeToDecimalHours(timeSlot.startTime);
+    const endHour = this.timeToDecimalHours(timeSlot.endTime);
 
     // Weekend classes allowed 7:30 AM - 9:00 PM
     if (timeSlot.dayOfWeek === 0 || timeSlot.dayOfWeek === 6) {
@@ -160,14 +224,22 @@ export class ConstraintService {
   }
 
   private static isNightTimeSlot(timeSlot: TimeSlot): boolean {
-    const startHour = parseInt(timeSlot.startTime.split(':')[0]);
-    const endHour = parseInt(timeSlot.endTime.split(':')[0]);
+    const startHour = this.timeToDecimalHours(timeSlot.startTime);
+    const endHour = this.timeToDecimalHours(timeSlot.endTime);
     return startHour >= 16.5 && endHour <= 21;
   }
 
   private static timeToMinutes(time: string): number {
     const [hours, minutes] = time.split(':').map(Number);
     return hours * 60 + minutes;
+  }
+
+  /**
+   * Convert time string (HH:MM) to decimal hours (e.g., "07:30" -> 7.5)
+   */
+  private static timeToDecimalHours(time: string): number {
+    const [hours, minutes] = time.split(':').map(Number);
+    return hours + (minutes / 60);
   }
 
   static getMaxLoadForFaculty(faculty: Faculty): { regular: number; extra: number } {
@@ -181,5 +253,13 @@ export class ConstraintService {
       regular: Math.floor(baseLimit.regular * multiplier),
       extra: Math.floor(baseLimit.extra * multiplier),
     };
+  }
+
+  /**
+   * Public method to determine load type for designee faculty based on time slot
+   * Used by controllers when creating assignments
+   */
+  static getDesigneeLoadType(timeSlot: TimeSlot): LoadType {
+    return this.determineDesigneeLoadType(timeSlot);
   }
 }

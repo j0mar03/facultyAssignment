@@ -64,6 +64,12 @@ export class Assignment {
   @Column('decimal', { precision: 4, scale: 1 })
   contactHours!: number;
 
+  @Column('decimal', { precision: 3, scale: 1, default: 0 })
+  lectureHours!: number;
+
+  @Column('decimal', { precision: 3, scale: 1, default: 0 })
+  laboratoryHours!: number;
+
   @Column({ nullable: true })
   approvedBy!: string;
 

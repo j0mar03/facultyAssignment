@@ -4,6 +4,7 @@ import { Section } from '../entities/Section';
 import { Course } from '../entities/Course';
 import { Faculty } from '../entities/Faculty';
 import { Assignment } from '../entities/Assignment';
+import { ConstraintService } from '../services/ConstraintService';
 
 export class SectionController {
   private sectionRepo = AppDataSource.getRepository(Section);
@@ -21,7 +22,8 @@ export class SectionController {
         facultyId, 
         status, 
         unassigned,
-        hasConflicts 
+        hasConflicts,
+        sectionCode
       } = req.query;
 
       let query = this.sectionRepo.createQueryBuilder('section')
@@ -51,6 +53,10 @@ export class SectionController {
 
       if (unassigned === 'true') {
         query = query.andWhere('section.facultyId IS NULL');
+      }
+
+      if (sectionCode) {
+        query = query.andWhere('section.sectionCode = :sectionCode', { sectionCode });
       }
 
       const sections = await query.getMany();
@@ -187,21 +193,29 @@ export class SectionController {
       const { id } = req.params;
       const updateData = req.body;
 
+      console.log('Update section request:', { id, updateData });
+
       const section = await this.sectionRepo.findOne({ where: { id } });
       if (!section) {
+        console.log('Section not found:', id);
         return res.status(404).json({ error: 'Section not found' });
       }
 
+      console.log('Found section:', section);
+
       // Validate faculty if being updated
       if (updateData.facultyId) {
+        console.log('Validating faculty:', updateData.facultyId);
         const faculty = await this.facultyRepo.findOne({ where: { id: updateData.facultyId } });
         if (!faculty) {
+          console.log('Faculty not found:', updateData.facultyId);
           return res.status(400).json({ error: 'Faculty not found' });
         }
 
         // Check for conflicts if timeSlots are being updated
         const timeSlots = updateData.timeSlots || section.timeSlots;
         if (timeSlots && timeSlots.length > 0) {
+          console.log('Checking schedule conflicts for timeSlots:', timeSlots);
           const conflicts = await this.checkScheduleConflicts(
             updateData.facultyId, 
             timeSlots, 
@@ -210,6 +224,7 @@ export class SectionController {
             id // Exclude current section from conflict check
           );
           if (conflicts.length > 0) {
+            console.log('Schedule conflicts found:', conflicts);
             return res.status(400).json({ 
               error: 'Schedule conflicts detected',
               conflicts: conflicts 
@@ -218,16 +233,20 @@ export class SectionController {
         }
       }
 
+      console.log('Updating section with data:', updateData);
       await this.sectionRepo.update(id, updateData);
       
+      console.log('Fetching updated section...');
       const updatedSection = await this.sectionRepo.findOne({
         where: { id },
         relations: ['course', 'faculty']
       });
 
+      console.log('Updated section:', updatedSection);
       res.json(updatedSection);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Update section error:', error);
+      console.error('Error stack:', error.stack);
       res.status(500).json({ error: 'Failed to update section' });
     }
   };
@@ -486,10 +505,20 @@ export class SectionController {
       const courseCredits = parseInt(String(section.course.credits || 0));
       const contactHours = parseInt(String(section.course.contactHours || 0));
       
-      // Determine if this is regular or extra load (simplified logic)
-      const isExtraLoad = faculty.currentRegularLoad >= 21;
+      // Determine load type based on faculty type and time slot
+      let loadType: 'Regular' | 'Extra' = 'Regular';
       
-      if (isExtraLoad) {
+      if (faculty.type === 'Designee' && section.timeSlots && section.timeSlots.length > 0) {
+        // For designees, use time-based load categorization
+        const timeSlotLoadType = ConstraintService.getDesigneeLoadType(section.timeSlots[0]);
+        loadType = timeSlotLoadType as 'Regular' | 'Extra';
+      } else {
+        // For non-designees, use simplified logic
+        const isExtraLoad = faculty.currentRegularLoad >= 21;
+        loadType = isExtraLoad ? 'Extra' : 'Regular';
+      }
+      
+      if (loadType === 'Extra') {
         faculty.currentExtraLoad = parseInt(String(faculty.currentExtraLoad)) + contactHours;
       } else {
         faculty.currentRegularLoad = parseInt(String(faculty.currentRegularLoad)) + contactHours;
@@ -514,7 +543,7 @@ export class SectionController {
           facultyId: facultyId,
           courseId: section.courseId,
           sectionId: sectionId,
-          type: isExtraLoad ? 'Extra' : 'Regular',
+          type: loadType,
           status: 'Active',
           timeSlot: section.timeSlots && section.timeSlots.length > 0 ? {
             dayOfWeek: section.timeSlots[0].dayOfWeek,
@@ -537,7 +566,7 @@ export class SectionController {
         });
       } else {
         // Update existing assignment
-        assignment.type = isExtraLoad ? 'Extra' : 'Regular';
+        assignment.type = loadType;
         assignment.status = 'Active';
         assignment.room = section.room || '';
         assignment.sectionId = sectionId;
@@ -592,13 +621,24 @@ export class SectionController {
       if (section.faculty) {
         const contactHours = parseInt(String(section.course.contactHours || 0));
         
-        // Determine if this was regular or extra load
-        const currentExtraLoad = parseInt(String(section.faculty.currentExtraLoad));
-        const currentRegularLoad = parseInt(String(section.faculty.currentRegularLoad));
+        // Determine what type of load this was based on faculty type and time slot
+        let wasExtraLoad = false;
         
-        if (currentExtraLoad >= contactHours) {
+        if (section.faculty.type === 'Designee' && section.timeSlots && section.timeSlots.length > 0) {
+          // For designees, check if this was part-time or Saturday (extra load)
+          const timeSlotLoadType = ConstraintService.getDesigneeLoadType(section.timeSlots[0]);
+          wasExtraLoad = timeSlotLoadType === 'Extra';
+        } else {
+          // For non-designees, check current load distribution
+          const currentExtraLoad = parseInt(String(section.faculty.currentExtraLoad));
+          wasExtraLoad = currentExtraLoad >= contactHours;
+        }
+        
+        if (wasExtraLoad) {
+          const currentExtraLoad = parseInt(String(section.faculty.currentExtraLoad));
           section.faculty.currentExtraLoad = currentExtraLoad - contactHours;
         } else {
+          const currentRegularLoad = parseInt(String(section.faculty.currentRegularLoad));
           section.faculty.currentRegularLoad = currentRegularLoad - contactHours;
         }
         

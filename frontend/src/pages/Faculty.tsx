@@ -42,7 +42,7 @@ import {
   CalendarToday as CalendarIcon,
 } from '@mui/icons-material';
 import { useForm, Controller } from 'react-hook-form';
-import { getFaculty, createFaculty, updateFaculty } from '../services/api';
+import { getFaculty, createFaculty, updateFaculty, deleteFaculty, forceDeleteFaculty } from '../services/api';
 import { sectionService } from '../services/sectionService';
 
 interface Faculty {
@@ -153,6 +153,77 @@ const FacultyScheduleTab: React.FC<FacultyScheduleTabProps> = ({
     return hourIndex * 80;
   };
 
+  // Convert time string to decimal hours (e.g., "07:30" -> 7.5)
+  const timeToDecimalHours = (timeStr: string): number => {
+    const [hours, minutes] = timeStr.split(':').map(Number);
+    return hours + (minutes / 60);
+  };
+
+  // Determine load type for designee faculty based on time slot
+  const determineDesigneeLoadType = (timeSlot: any, facultyType: string): 'Regular' | 'Extra' | 'Temporary' => {
+    // Only apply special logic for designees
+    if (facultyType !== 'Designee') {
+      return 'Regular'; // Default for non-designees
+    }
+
+    const startHour = timeToDecimalHours(timeSlot.startTime);
+    const endHour = timeToDecimalHours(timeSlot.endTime);
+    const dayOfWeek = timeSlot.dayOfWeek;
+
+    // Saturday/Sunday classes = temporary substitution
+    if (dayOfWeek === 6 || dayOfWeek === 0) {
+      return 'Temporary';
+    }
+
+    // Check if time falls within regular hours (9am-6pm)
+    const isWithinRegularHours = startHour >= 9.0 && endHour <= 18.0;
+    
+    if (isWithinRegularHours) {
+      return 'Regular';
+    }
+
+    // Check if time falls within part-time hours (7:30am-9am or 6pm-9pm)
+    const isEarlyPartTime = startHour >= 7.5 && endHour <= 9.0;
+    const isEveningPartTime = startHour >= 18.0 && endHour <= 21.0;
+    
+    if (isEarlyPartTime || isEveningPartTime) {
+      return 'Extra'; // Part-time hours counted as extra load
+    }
+
+    // Default to regular if doesn't fit other categories
+    return 'Regular';
+  };
+
+  // Get color for load type
+  const getLoadTypeColor = (loadType: 'Regular' | 'Extra' | 'Temporary') => {
+    switch (loadType) {
+      case 'Regular':
+        return {
+          backgroundColor: 'primary.light',
+          color: 'primary.contrastText',
+          borderColor: 'primary.main'
+        };
+      case 'Extra':
+        return {
+          backgroundColor: 'warning.light',
+          color: 'warning.contrastText',
+          borderColor: 'warning.main'
+        };
+      case 'Temporary':
+        return {
+          backgroundColor: 'secondary.light',
+          color: 'secondary.contrastText',
+          borderColor: 'secondary.main'
+        };
+      default:
+        return {
+          backgroundColor: 'grey.light',
+          color: 'text.primary',
+          borderColor: 'grey.main'
+        };
+    }
+  };
+
   // Get faculty load summary for selected faculty
   const getSelectedFacultyLoad = () => {
     if (selectedFacultyId === 'all') return null;
@@ -164,7 +235,7 @@ const FacultyScheduleTab: React.FC<FacultyScheduleTabProps> = ({
         Regular: { regular: 21, extra: 9 },
         PartTime: { regular: 12, extra: 0 },
         Temporary: { regular: 21, extra: 9 },
-        Designee: { regular: 18, extra: 6 },
+        Designee: { regular: 9, extra: 6 },
       };
       return limits[type as keyof typeof limits] || { regular: 0, extra: 0 };
     };
@@ -299,6 +370,60 @@ const FacultyScheduleTab: React.FC<FacultyScheduleTabProps> = ({
           <Typography variant="h6" gutterBottom>
             Weekly Schedule View
           </Typography>
+
+          {/* Load Type Legend */}
+          <Box sx={{ mb: 3, p: 2, border: '1px solid #e0e0e0', borderRadius: 1, backgroundColor: '#f9f9f9' }}>
+            <Typography variant="subtitle2" fontWeight="bold" gutterBottom>
+              Load Type Legend (For Designees):
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Box sx={{ 
+                  width: 20, 
+                  height: 20, 
+                  backgroundColor: 'primary.light',
+                  border: '2px solid',
+                  borderColor: 'primary.main',
+                  borderRadius: 1 
+                }} />
+                <Typography variant="body2">
+                  <strong>Regular Load</strong> - 9:00am to 6:00pm (Weekdays only)
+                </Typography>
+              </Box>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Box sx={{ 
+                  width: 20, 
+                  height: 20, 
+                  backgroundColor: 'warning.light',
+                  border: '2px solid',
+                  borderColor: 'warning.main',
+                  borderRadius: 1 
+                }} />
+                <Typography variant="body2">
+                  <strong>Extra Load</strong> - 7:30am-9:00am & 6:00pm-9:00pm (Part-time hours)
+                </Typography>
+              </Box>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Box sx={{ 
+                  width: 20, 
+                  height: 20, 
+                  backgroundColor: 'secondary.light',
+                  border: '2px solid',
+                  borderColor: 'secondary.main',
+                  borderRadius: 1 
+                }} />
+                <Typography variant="body2">
+                  <strong>Temporary Substitution</strong> - Weekends (Saturday/Sunday)
+                </Typography>
+              </Box>
+            </Box>
+            <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+              * Color coding applies to Designee faculty. Other faculty types use regular load classification.
+            </Typography>
+            <Typography variant="caption" color="primary.main" sx={{ mt: 0.5, display: 'block', fontWeight: 'bold' }}>
+              ⚠️ Note: 7:30am-9:00am time slots are classified as Extra Load (Part-time hours) for designees.
+            </Typography>
+          </Box>
           
           {/* Calendar Header */}
           <Box sx={{ display: 'flex', mb: 2 }}>
@@ -377,74 +502,99 @@ const FacultyScheduleTab: React.FC<FacultyScheduleTabProps> = ({
                     />
                   ))}
                   
-                  {/* Sections positioned absolutely */}
-                  {getSectionsForDay(day.day).map((section) => {
-                    const width = getSectionWidth(section, day.day);
-                    const left = getSectionLeft(section, day.day);
-                    const timeSlot = section.timeSlots?.find((slot: any) => slot.dayOfWeek === day.day);
+                  {/* Sections positioned absolutely - show all time slots for each section */}
+                  {getSectionsForDay(day.day).flatMap((section) => {
+                    // Get all time slots for this section on this day
+                    const sectionTimeSlots = section.timeSlots?.filter((slot: any) => slot.dayOfWeek === day.day) || [];
+                    
+                    // Create a visual block for each time slot
+                    return sectionTimeSlots.map((timeSlot: any, slotIndex: number) => {
+                      const startMinutes = timeToMinutes(timeSlot.startTime);
+                      const endMinutes = timeToMinutes(timeSlot.endTime);
+                      const startHour = Math.floor(startMinutes / 60);
+                      const duration = endMinutes - startMinutes;
+                      const hours = Math.ceil(duration / 60);
+                      
+                      const hourIndex = timeSlots.findIndex(slot => slot.hour === startHour);
+                      const left = hourIndex * 80;
+                      const width = hours * 80;
 
-                    return (
-                      <Tooltip
-                        key={section.id}
-                        title={
-                          <Box>
-                            <Typography variant="subtitle2">{section.course.code}</Typography>
-                            <Typography variant="body2">{section.course.name}</Typography>
-                            <Typography variant="body2">Section: {section.sectionCode}</Typography>
-                            <Typography variant="body2">
-                              Faculty: {section.faculty?.firstName} {section.faculty?.lastName}
-                            </Typography>
-                            <Typography variant="body2">Room: {section.room || 'TBA'}</Typography>
-                            <Typography variant="body2">Time: {timeSlot?.startTime} - {timeSlot?.endTime}</Typography>
-                            <Typography variant="body2">
-                              Students: {section.enrolledStudents}/{section.maxStudents}
-                            </Typography>
-                          </Box>
-                        }
-                      >
-                        <Card
-                          sx={{
-                            position: 'absolute',
-                            top: 4,
-                            left: left + 4,
-                            width: width - 8,
-                            height: 'calc(100% - 8px)',
-                            backgroundColor: section.isNightSection ? 'secondary.light' : 'primary.light',
-                            color: section.isNightSection ? 'secondary.contrastText' : 'primary.contrastText',
-                            cursor: 'pointer',
-                            zIndex: 1,
-                            '&:hover': {
-                              transform: 'scale(1.02)',
-                              zIndex: 2
-                            },
-                            transition: 'all 0.2s ease-in-out',
-                            overflow: 'hidden'
-                          }}
+                      // Determine load type for this time slot
+                      const loadType = determineDesigneeLoadType(timeSlot, section.faculty?.type || 'Regular');
+                      const colorConfig = getLoadTypeColor(loadType);
+
+                      return (
+                        <Tooltip
+                          key={`${section.id}-${slotIndex}`}
+                          title={
+                            <Box>
+                              <Typography variant="subtitle2">{section.course.code}</Typography>
+                              <Typography variant="body2">{section.course.name}</Typography>
+                              <Typography variant="body2">Section: {section.sectionCode}</Typography>
+                              <Typography variant="body2">
+                                Faculty: {section.faculty?.firstName} {section.faculty?.lastName} ({section.faculty?.type})
+                              </Typography>
+                              <Typography variant="body2">Room: {section.room || 'TBA'}</Typography>
+                              <Typography variant="body2">Time: {timeSlot.startTime} - {timeSlot.endTime}</Typography>
+                              <Typography variant="body2" sx={{ 
+                                fontWeight: 'bold',
+                                color: loadType === 'Regular' ? 'primary.main' : 
+                                       loadType === 'Extra' ? 'warning.main' : 'secondary.main' 
+                              }}>
+                                Load Type: {loadType} {loadType === 'Extra' ? '(Part-time hours)' : loadType === 'Temporary' ? '(Weekend substitution)' : '(Regular hours)'}
+                              </Typography>
+                              <Typography variant="body2">
+                                Students: {section.enrolledStudents}/{section.maxStudents}
+                              </Typography>
+                            </Box>
+                          }
                         >
-                          <CardContent sx={{ p: 1, '&:last-child': { pb: 1 }, height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                            <Typography variant="subtitle2" fontWeight="bold" sx={{ fontSize: '0.75rem', lineHeight: 1.2 }}>
-                              {section.course.code}
-                            </Typography>
-                            
-                            <Typography variant="caption" sx={{ fontSize: '0.65rem', lineHeight: 1.1, mt: 0.5 }}>
-                              {section.sectionCode}
-                            </Typography>
-                            
-                            <Typography variant="caption" sx={{ fontSize: '0.6rem', lineHeight: 1, mt: 0.25, color: 'text.secondary' }}>
-                              {timeSlot?.startTime} - {timeSlot?.endTime}
-                            </Typography>
-                            
-                            <Typography variant="caption" sx={{ fontSize: '0.6rem', mt: 0.25 }}>
-                              {section.room || 'TBA'}
-                            </Typography>
-                            
-                            <Typography variant="caption" sx={{ fontSize: '0.6rem', mt: 0.25 }}>
-                              {section.enrolledStudents}/{section.maxStudents} students
-                            </Typography>
-                          </CardContent>
-                        </Card>
-                      </Tooltip>
-                    );
+                          <Card
+                            sx={{
+                              position: 'absolute',
+                              top: 4,
+                              left: left + 4,
+                              width: width - 8,
+                              height: 'calc(100% - 8px)',
+                              backgroundColor: colorConfig.backgroundColor,
+                              color: colorConfig.color,
+                              border: `2px solid`,
+                              borderColor: colorConfig.borderColor,
+                              cursor: 'pointer',
+                              zIndex: 1,
+                              '&:hover': {
+                                transform: 'scale(1.02)',
+                                zIndex: 2
+                              },
+                              transition: 'all 0.2s ease-in-out',
+                              overflow: 'hidden'
+                            }}
+                          >
+                            <CardContent sx={{ p: 1, '&:last-child': { pb: 1 }, height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                              <Typography variant="subtitle2" fontWeight="bold" sx={{ fontSize: '0.75rem', lineHeight: 1.2 }}>
+                                {section.course.code}
+                              </Typography>
+                              
+                              <Typography variant="caption" sx={{ fontSize: '0.65rem', lineHeight: 1.1, mt: 0.5 }}>
+                                {section.sectionCode}
+                              </Typography>
+                              
+                              <Typography variant="caption" sx={{ fontSize: '0.6rem', lineHeight: 1, mt: 0.25, color: 'text.secondary' }}>
+                                {timeSlot.startTime} - {timeSlot.endTime}
+                              </Typography>
+                              
+                              <Typography variant="caption" sx={{ fontSize: '0.6rem', mt: 0.25 }}>
+                                {section.room || 'TBA'}
+                              </Typography>
+                              
+                              <Typography variant="caption" sx={{ fontSize: '0.6rem', mt: 0.25 }}>
+                                {section.enrolledStudents}/{section.maxStudents} students
+                              </Typography>
+                            </CardContent>
+                          </Card>
+                        </Tooltip>
+                      );
+                    });
                   })}
                 </Box>
               </Box>
@@ -489,10 +639,8 @@ const Faculty: React.FC = () => {
   ];
 
   const departments = [
-    'Computer Science',
-    'Information Technology',
-    'Information Systems',
     'Computer Engineering',
+    'Electronics Communication Engineer',
   ];
 
   useEffect(() => {
@@ -557,7 +705,7 @@ const Faculty: React.FC = () => {
         lastName: '',
         email: '',
         type: 'Regular',
-        department: 'Computer Science',
+        department: 'Computer Engineering',
         college: 'College of Computer and Information Sciences',
       });
     }
@@ -585,12 +733,54 @@ const Faculty: React.FC = () => {
     }
   };
 
+  const handleDeleteFaculty = async (facultyId: string) => {
+    const facultyMember = faculty.find(f => f.id === facultyId);
+    const confirmMessage = `Are you sure you want to delete ${facultyMember?.firstName} ${facultyMember?.lastName}? This action cannot be undone.`;
+    
+    if (window.confirm(confirmMessage)) {
+      try {
+        await deleteFaculty(facultyId);
+        await fetchFaculty();
+        setError('');
+      } catch (err: any) {
+        if (err.response?.status === 409) {
+          // Faculty has dependencies
+          const errorData = err.response.data;
+          const dependencyMessage = errorData.message || 'This faculty member has existing assignments.';
+          const deps = errorData.dependencies;
+          
+          let detailMessage = `${dependencyMessage}\n\nDetails:\n`;
+          if (deps?.assignments > 0) detailMessage += `• ${deps.assignments} assignment(s)\n`;
+          if (deps?.sections > 0) detailMessage += `• ${deps.sections} section(s)\n`;
+          if (deps?.iteesRecords > 0) detailMessage += `• ${deps.iteesRecords} ITEES record(s)\n`;
+          
+          detailMessage += '\nWhat would you like to do?\n';
+          detailMessage += '• Click OK to force delete (removes all related data)\n';
+          detailMessage += '• Click Cancel to keep the faculty member';
+          
+          if (window.confirm(detailMessage)) {
+            try {
+              await forceDeleteFaculty(facultyId);
+              await fetchFaculty();
+              setError('');
+              alert('Faculty member and all related records have been deleted successfully.');
+            } catch (forceErr: any) {
+              setError(forceErr.response?.data?.error || 'Failed to force delete faculty');
+            }
+          }
+        } else {
+          setError(err.response?.data?.error || 'Failed to delete faculty');
+        }
+      }
+    }
+  };
+
   const getLoadLimitForType = (type: string) => {
     const limits = {
       Regular: { regular: 21, extra: 9 },
       PartTime: { regular: 12, extra: 0 },
       Temporary: { regular: 21, extra: 9 },
-      Designee: { regular: 18, extra: 6 },
+      Designee: { regular: 9, extra: 6 },
     };
     return limits[type as keyof typeof limits] || { regular: 0, extra: 0 };
   };
@@ -808,6 +998,13 @@ const Faculty: React.FC = () => {
                       onClick={() => handleOpenDialog(member)}
                     >
                       <EditIcon />
+                    </IconButton>
+                    <IconButton
+                      size="small"
+                      color="error"
+                      onClick={() => handleDeleteFaculty(member.id)}
+                    >
+                      <DeleteIcon />
                     </IconButton>
                   </TableCell>
                 </TableRow>

@@ -366,8 +366,8 @@ export class DatabaseSeeder {
         contactHours: 6.0,
         program: 'Diploma in Computer Engineering Technology',
         department: 'Department Of Computer And Electronics Engineering Technology',
-        semester: 'Second',
-        academicYear: '2024-2025',
+        semester: 'First',
+        academicYear: '2025-2026',
         requiresNightSection: true, // Has evening sections
         maxStudents: 30,
         enrolledStudents: 25,
@@ -379,8 +379,8 @@ export class DatabaseSeeder {
         contactHours: 6.0,
         program: 'Diploma in Computer Engineering Technology',
         department: 'Department Of Computer And Electronics Engineering Technology',
-        semester: 'Second',
-        academicYear: '2024-2025',
+        semester: 'First',
+        academicYear: '2025-2026',
         requiresNightSection: true, // Has evening sections
         maxStudents: 30,
         enrolledStudents: 28,
@@ -392,8 +392,8 @@ export class DatabaseSeeder {
         contactHours: 5.0,
         program: 'Diploma in Computer Engineering Technology',
         department: 'Department Of Computer And Electronics Engineering Technology',
-        semester: 'Second',
-        academicYear: '2024-2025',
+        semester: 'First',
+        academicYear: '2025-2026',
         requiresNightSection: false,
         maxStudents: 30,
         enrolledStudents: 27,
@@ -405,11 +405,270 @@ export class DatabaseSeeder {
         contactHours: 3.0,
         program: 'Diploma in Computer Engineering Technology',
         department: 'Department Of Computer And Electronics Engineering Technology',
-        semester: 'Second',
-        academicYear: '2024-2025',
+        semester: 'First',
+        academicYear: '2025-2026',
         requiresNightSection: true, // Has evening sections
         maxStudents: 30,
         enrolledStudents: 26,
+      },
+      
+      // ===== DCPET 2nd Year Courses =====
+      {
+        code: 'CMPE 201',
+        name: 'Computer Engineering as a Discipline',
+        credits: 3.0,
+        contactHours: 3.0,
+        lectureHours: 3.0,
+        laboratoryHours: 0.0,
+        program: 'Diploma in Computer Engineering Technology',
+        department: 'Department Of Computer And Electronics Engineering Technology',
+        semester: 'First',
+        academicYear: '2025-2026',
+        requiresNightSection: true,
+        maxStudents: 30,
+        enrolledStudents: 0,
+      },
+      {
+        code: 'MATH 201',
+        name: 'Discrete Mathematics',
+        credits: 3.0,
+        contactHours: 3.0,
+        lectureHours: 3.0,
+        laboratoryHours: 0.0,
+        program: 'Diploma in Computer Engineering Technology',
+        department: 'Department Of Computer And Electronics Engineering Technology',
+        semester: 'First',
+        academicYear: '2025-2026',
+        requiresNightSection: false,
+        maxStudents: 30,
+        enrolledStudents: 0,
+      },
+      {
+        code: 'CMPE 202',
+        name: 'Data Structures and Algorithms',
+        credits: 3.0,
+        contactHours: 5.0,
+        lectureHours: 2.0,
+        laboratoryHours: 3.0,
+        program: 'Diploma in Computer Engineering Technology',
+        department: 'Department Of Computer And Electronics Engineering Technology',
+        semester: 'First',
+        academicYear: '2025-2026',
+        requiresNightSection: true,
+        maxStudents: 30,
+        enrolledStudents: 0,
+      },
+      {
+        code: 'CPE 201',
+        name: 'CPE Professional Course 1',
+        credits: 3.0,
+        contactHours: 3.0,
+        lectureHours: 3.0,
+        laboratoryHours: 0.0,
+        program: 'Diploma in Computer Engineering Technology',
+        department: 'Department Of Computer And Electronics Engineering Technology',
+        semester: 'First',
+        academicYear: '2025-2026',
+        requiresNightSection: false,
+        maxStudents: 30,
+        enrolledStudents: 0,
+      },
+      {
+        code: 'CPET 201',
+        name: '2D Animation',
+        credits: 2.0,
+        contactHours: 6.0,
+        lectureHours: 1.0,
+        laboratoryHours: 5.0,
+        program: 'Diploma in Computer Engineering Technology',
+        department: 'Department Of Computer And Electronics Engineering Technology',
+        semester: 'First',
+        academicYear: '2025-2026',
+        requiresNightSection: true,
+        maxStudents: 30,
+        enrolledStudents: 0,
+      },
+      {
+        code: 'ELEC 201',
+        name: 'Fundamentals of Electronics Circuits',
+        credits: 3.0,
+        contactHours: 5.0,
+        lectureHours: 2.0,
+        laboratoryHours: 3.0,
+        program: 'Diploma in Computer Engineering Technology',
+        department: 'Department Of Computer And Electronics Engineering Technology',
+        semester: 'First',
+        academicYear: '2025-2026',
+        requiresNightSection: false,
+        maxStudents: 30,
+        enrolledStudents: 0,
+      },
+      {
+        code: 'ELEC 202',
+        name: 'Fundamentals of Electrical Circuits',
+        credits: 3.0,
+        contactHours: 5.0,
+        lectureHours: 2.0,
+        laboratoryHours: 3.0,
+        program: 'Diploma in Computer Engineering Technology',
+        department: 'Department Of Computer And Electronics Engineering Technology',
+        semester: 'First',
+        academicYear: '2025-2026',
+        requiresNightSection: true,
+        maxStudents: 30,
+        enrolledStudents: 0,
+      },
+      {
+        code: 'FIL 201',
+        name: 'Filipinolohiya at Pambansang Kaulanran',
+        credits: 3.0,
+        contactHours: 3.0,
+        lectureHours: 3.0,
+        laboratoryHours: 0.0,
+        program: 'Diploma in Computer Engineering Technology',
+        department: 'General Education',
+        semester: 'First',
+        academicYear: '2025-2026',
+        requiresNightSection: false,
+        maxStudents: 30,
+        enrolledStudents: 0,
+      },
+      {
+        code: 'PE 203',
+        name: 'Physical Activity Towards Health and Fitness 3',
+        credits: 2.0,
+        contactHours: 2.0,
+        lectureHours: 0.0,
+        laboratoryHours: 2.0,
+        program: 'Diploma in Computer Engineering Technology',
+        department: 'Physical Education',
+        semester: 'First',
+        academicYear: '2025-2026',
+        requiresNightSection: false,
+        maxStudents: 30,
+        enrolledStudents: 0,
+      },
+      
+      // ===== DCPET 3rd Year Courses =====
+      {
+        code: 'CMPE 301',
+        name: 'Computer Engineering Drafting and Design',
+        credits: 3.0,
+        contactHours: 5.0,
+        lectureHours: 2.0,
+        laboratoryHours: 3.0,
+        program: 'Diploma in Computer Engineering Technology',
+        department: 'Department Of Computer And Electronics Engineering Technology',
+        semester: 'First',
+        academicYear: '2025-2026',
+        requiresNightSection: true,
+        maxStudents: 30,
+        enrolledStudents: 0,
+      },
+      {
+        code: 'CMPE 302',
+        name: 'Data and Digital Communications',
+        credits: 3.0,
+        contactHours: 5.0,
+        lectureHours: 2.0,
+        laboratoryHours: 3.0,
+        program: 'Diploma in Computer Engineering Technology',
+        department: 'Department Of Computer And Electronics Engineering Technology',
+        semester: 'First',
+        academicYear: '2025-2026',
+        requiresNightSection: false,
+        maxStudents: 30,
+        enrolledStudents: 0,
+      },
+      {
+        code: 'CPE 301',
+        name: 'CPE Laws and Professional Practice',
+        credits: 3.0,
+        contactHours: 3.0,
+        lectureHours: 3.0,
+        laboratoryHours: 0.0,
+        program: 'Diploma in Computer Engineering Technology',
+        department: 'Department Of Computer And Electronics Engineering Technology',
+        semester: 'First',
+        academicYear: '2025-2026',
+        requiresNightSection: true,
+        maxStudents: 30,
+        enrolledStudents: 0,
+      },
+      {
+        code: 'CMPE 303',
+        name: 'Microprocessors',
+        credits: 3.0,
+        contactHours: 5.0,
+        lectureHours: 2.0,
+        laboratoryHours: 3.0,
+        program: 'Diploma in Computer Engineering Technology',
+        department: 'Department Of Computer And Electronics Engineering Technology',
+        semester: 'First',
+        academicYear: '2025-2026',
+        requiresNightSection: true,
+        maxStudents: 30,
+        enrolledStudents: 0,
+      },
+      {
+        code: 'CPE 302',
+        name: 'CPE Professional Course 3',
+        credits: 3.0,
+        contactHours: 3.0,
+        lectureHours: 3.0,
+        laboratoryHours: 0.0,
+        program: 'Diploma in Computer Engineering Technology',
+        department: 'Department Of Computer And Electronics Engineering Technology',
+        semester: 'First',
+        academicYear: '2025-2026',
+        requiresNightSection: false,
+        maxStudents: 30,
+        enrolledStudents: 0,
+      },
+      {
+        code: 'CPET 301',
+        name: 'CpET Project Development 1',
+        credits: 3.0,
+        contactHours: 6.0,
+        lectureHours: 1.0,
+        laboratoryHours: 5.0,
+        program: 'Diploma in Computer Engineering Technology',
+        department: 'Department Of Computer And Electronics Engineering Technology',
+        semester: 'First',
+        academicYear: '2025-2026',
+        requiresNightSection: true,
+        maxStudents: 30,
+        enrolledStudents: 0,
+      },
+      {
+        code: 'CPET 302',
+        name: 'Database Management System 2',
+        credits: 3.0,
+        contactHours: 5.0,
+        lectureHours: 2.0,
+        laboratoryHours: 3.0,
+        program: 'Diploma in Computer Engineering Technology',
+        department: 'Department Of Computer And Electronics Engineering Technology',
+        semester: 'First',
+        academicYear: '2025-2026',
+        requiresNightSection: false,
+        maxStudents: 30,
+        enrolledStudents: 0,
+      },
+      {
+        code: 'ENG 301',
+        name: 'Technical Communication',
+        credits: 3.0,
+        contactHours: 3.0,
+        lectureHours: 3.0,
+        laboratoryHours: 0.0,
+        program: 'Diploma in Computer Engineering Technology',
+        department: 'General Education',
+        semester: 'First',
+        academicYear: '2025-2026',
+        requiresNightSection: true,
+        maxStudents: 30,
+        enrolledStudents: 0,
       },
     ];
 
@@ -450,8 +709,8 @@ export class DatabaseSeeder {
         facultyId: faculty.find(f => f.lastName === 'Libed')?.id,
         status: 'Active' as const,
         classType: 'Laboratory' as const,
-        semester: 'Second',
-        academicYear: '2024-2025',
+        semester: 'First',
+        academicYear: '2025-2026',
         maxStudents: 30,
         enrolledStudents: 25,
         room: 'TBA',
@@ -467,8 +726,8 @@ export class DatabaseSeeder {
         facultyId: faculty.find(f => f.lastName === 'Libed')?.id,
         status: 'Active',
         classType: 'Laboratory',
-        semester: 'Second',
-        academicYear: '2024-2025',
+        semester: 'First',
+        academicYear: '2025-2026',
         maxStudents: 30,
         enrolledStudents: 28,
         room: 'IT205',
@@ -484,8 +743,8 @@ export class DatabaseSeeder {
         facultyId: faculty.find(f => f.lastName === 'Libed')?.id,
         status: 'Active',
         classType: 'Laboratory',
-        semester: 'Second',
-        academicYear: '2024-2025',
+        semester: 'First',
+        academicYear: '2025-2026',
         maxStudents: 30,
         enrolledStudents: 26,
         room: 'IT205',
@@ -502,8 +761,8 @@ export class DatabaseSeeder {
         facultyId: faculty.find(f => f.firstName === 'Frescian C.')?.id,
         status: 'Active',
         classType: 'Laboratory',
-        semester: 'Second',
-        academicYear: '2024-2025',
+        semester: 'First',
+        academicYear: '2025-2026',
         maxStudents: 30,
         enrolledStudents: 27,
         room: 'IT204',
@@ -519,8 +778,8 @@ export class DatabaseSeeder {
         facultyId: null,
         status: 'Planning',
         classType: 'Laboratory',
-        semester: 'Second',
-        academicYear: '2024-2025',
+        semester: 'First',
+        academicYear: '2025-2026',
         maxStudents: 30,
         enrolledStudents: 24,
         room: 'IT205',
@@ -536,8 +795,8 @@ export class DatabaseSeeder {
         facultyId: faculty.find(f => f.firstName === 'Frescian C.')?.id,
         status: 'Active',
         classType: 'Laboratory',
-        semester: 'Second',
-        academicYear: '2024-2025',
+        semester: 'First',
+        academicYear: '2025-2026',
         maxStudents: 30,
         enrolledStudents: 24,
         room: 'IT204',
@@ -555,8 +814,8 @@ export class DatabaseSeeder {
         facultyId: faculty.find(f => f.firstName === 'Jerome')?.id,
         status: 'Active' as const,
         classType: 'Combined' as const,
-        semester: 'Second',
-        academicYear: '2024-2025',
+        semester: 'First',
+        academicYear: '2025-2026',
         maxStudents: 30,
         enrolledStudents: 29,
         room: 'IT204',
@@ -572,8 +831,8 @@ export class DatabaseSeeder {
         facultyId: faculty.find(f => f.firstName === 'Jerome')?.id,
         status: 'Active',
         classType: 'Combined',
-        semester: 'Second',
-        academicYear: '2024-2025',
+        semester: 'First',
+        academicYear: '2025-2026',
         maxStudents: 30,
         enrolledStudents: 26,
         room: 'IT204',
@@ -589,8 +848,8 @@ export class DatabaseSeeder {
         facultyId: faculty.find(f => f.firstName === 'Jerome')?.id,
         status: 'Active',
         classType: 'Combined',
-        semester: 'Second',
-        academicYear: '2024-2025',
+        semester: 'First',
+        academicYear: '2025-2026',
         maxStudents: 30,
         enrolledStudents: 28,
         room: 'IT204',
@@ -606,8 +865,8 @@ export class DatabaseSeeder {
         courseId: courses.find(c => c.code === 'ENSC 014')?.id,
         status: 'Planning' as const,
         classType: 'Laboratory' as const,
-        semester: 'Second',
-        academicYear: '2024-2025',
+        semester: 'First',
+        academicYear: '2025-2026',
         maxStudents: 30,
         enrolledStudents: 22,
         room: 'TBA',
@@ -621,8 +880,8 @@ export class DatabaseSeeder {
         courseId: courses.find(c => c.code === 'ENSC 014')?.id,
         status: 'Planning',
         classType: 'Laboratory',
-        semester: 'Second',
-        academicYear: '2024-2025',
+        semester: 'First',
+        academicYear: '2025-2026',
         maxStudents: 30,
         enrolledStudents: 20,
         room: 'IT205',
@@ -637,13 +896,841 @@ export class DatabaseSeeder {
         facultyId: null,
         status: 'Planning',
         classType: 'Laboratory',
-        semester: 'Second',
-        academicYear: '2024-2025',
+        semester: 'First',
+        academicYear: '2025-2026',
         maxStudents: 30,
         enrolledStudents: 25,
         room: 'TBA',
         timeSlots: [
           { dayOfWeek: 5, startTime: '18:00', endTime: '21:00' } // Friday 6:00PM-9:00PM
+        ],
+        isNightSection: true
+      },
+      
+      // ===== DCPET 2-1, 2-2, 2-3 Sections (2nd Year Courses) =====
+      // CMPE 201 - Computer Engineering as a Discipline
+      {
+        sectionCode: 'DCPET 2-1',
+        courseId: courses.find(c => c.code === 'CMPE 201')?.id,
+        status: 'Planning',
+        classType: 'Lecture',
+        semester: 'First',
+        academicYear: '2025-2026',
+        maxStudents: 30,
+        enrolledStudents: 0,
+        room: 'TBA',
+        timeSlots: [
+          { dayOfWeek: 1, startTime: '07:30', endTime: '10:30' }
+        ],
+        isNightSection: false
+      },
+      {
+        sectionCode: 'DCPET 2-2',
+        courseId: courses.find(c => c.code === 'CMPE 201')?.id,
+        status: 'Planning',
+        classType: 'Lecture',
+        semester: 'First',
+        academicYear: '2025-2026',
+        maxStudents: 30,
+        enrolledStudents: 0,
+        room: 'TBA',
+        timeSlots: [
+          { dayOfWeek: 2, startTime: '16:30', endTime: '19:30' }
+        ],
+        isNightSection: true
+      },
+      {
+        sectionCode: 'DCPET 2-3',
+        courseId: courses.find(c => c.code === 'CMPE 201')?.id,
+        status: 'Planning',
+        classType: 'Lecture',
+        semester: 'First',
+        academicYear: '2025-2026',
+        maxStudents: 30,
+        enrolledStudents: 0,
+        room: 'TBA',
+        timeSlots: [
+          { dayOfWeek: 3, startTime: '13:30', endTime: '16:30' }
+        ],
+        isNightSection: false
+      },
+      
+      // MATH 201 - Discrete Mathematics
+      {
+        sectionCode: 'DCPET 2-1',
+        courseId: courses.find(c => c.code === 'MATH 201')?.id,
+        status: 'Planning',
+        classType: 'Lecture',
+        semester: 'First',
+        academicYear: '2025-2026',
+        maxStudents: 30,
+        enrolledStudents: 0,
+        room: 'TBA',
+        timeSlots: [
+          { dayOfWeek: 1, startTime: '10:30', endTime: '13:30' }
+        ],
+        isNightSection: false
+      },
+      {
+        sectionCode: 'DCPET 2-2',
+        courseId: courses.find(c => c.code === 'MATH 201')?.id,
+        status: 'Planning',
+        classType: 'Lecture',
+        semester: 'First',
+        academicYear: '2025-2026',
+        maxStudents: 30,
+        enrolledStudents: 0,
+        room: 'TBA',
+        timeSlots: [
+          { dayOfWeek: 3, startTime: '07:30', endTime: '10:30' }
+        ],
+        isNightSection: false
+      },
+      {
+        sectionCode: 'DCPET 2-3',
+        courseId: courses.find(c => c.code === 'MATH 201')?.id,
+        status: 'Planning',
+        classType: 'Lecture',
+        semester: 'First',
+        academicYear: '2025-2026',
+        maxStudents: 30,
+        enrolledStudents: 0,
+        room: 'TBA',
+        timeSlots: [
+          { dayOfWeek: 4, startTime: '10:30', endTime: '13:30' }
+        ],
+        isNightSection: false
+      },
+      
+      // CMPE 202 - Data Structures and Algorithms
+      {
+        sectionCode: 'DCPET 2-1',
+        courseId: courses.find(c => c.code === 'CMPE 202')?.id,
+        status: 'Planning',
+        classType: 'Combined',
+        semester: 'First',
+        academicYear: '2025-2026',
+        maxStudents: 30,
+        enrolledStudents: 0,
+        room: 'TBA',
+        timeSlots: [
+          { dayOfWeek: 1, startTime: '13:30', endTime: '16:30' },
+          { dayOfWeek: 4, startTime: '13:30', endTime: '15:30' }
+        ],
+        isNightSection: false
+      },
+      {
+        sectionCode: 'DCPET 2-2',
+        courseId: courses.find(c => c.code === 'CMPE 202')?.id,
+        status: 'Planning',
+        classType: 'Combined',
+        semester: 'First',
+        academicYear: '2025-2026',
+        maxStudents: 30,
+        enrolledStudents: 0,
+        room: 'TBA',
+        timeSlots: [
+          { dayOfWeek: 2, startTime: '18:00', endTime: '21:00' },
+          { dayOfWeek: 5, startTime: '18:00', endTime: '20:00' }
+        ],
+        isNightSection: true
+      },
+      {
+        sectionCode: 'DCPET 2-3',
+        courseId: courses.find(c => c.code === 'CMPE 202')?.id,
+        status: 'Planning',
+        classType: 'Combined',
+        semester: 'First',
+        academicYear: '2025-2026',
+        maxStudents: 30,
+        enrolledStudents: 0,
+        room: 'TBA',
+        timeSlots: [
+          { dayOfWeek: 3, startTime: '10:30', endTime: '13:30' },
+          { dayOfWeek: 6, startTime: '07:30', endTime: '09:30' }
+        ],
+        isNightSection: false
+      },
+      
+      // CPE 201 - CPE Professional Course 1
+      {
+        sectionCode: 'DCPET 2-1',
+        courseId: courses.find(c => c.code === 'CPE 201')?.id,
+        status: 'Planning',
+        classType: 'Lecture',
+        semester: 'First',
+        academicYear: '2025-2026',
+        maxStudents: 30,
+        enrolledStudents: 0,
+        room: 'TBA',
+        timeSlots: [
+          { dayOfWeek: 2, startTime: '07:30', endTime: '10:30' }
+        ],
+        isNightSection: false
+      },
+      {
+        sectionCode: 'DCPET 2-2',
+        courseId: courses.find(c => c.code === 'CPE 201')?.id,
+        status: 'Planning',
+        classType: 'Lecture',
+        semester: 'First',
+        academicYear: '2025-2026',
+        maxStudents: 30,
+        enrolledStudents: 0,
+        room: 'TBA',
+        timeSlots: [
+          { dayOfWeek: 4, startTime: '07:30', endTime: '10:30' }
+        ],
+        isNightSection: false
+      },
+      {
+        sectionCode: 'DCPET 2-3',
+        courseId: courses.find(c => c.code === 'CPE 201')?.id,
+        status: 'Planning',
+        classType: 'Lecture',
+        semester: 'First',
+        academicYear: '2025-2026',
+        maxStudents: 30,
+        enrolledStudents: 0,
+        room: 'TBA',
+        timeSlots: [
+          { dayOfWeek: 5, startTime: '07:30', endTime: '10:30' }
+        ],
+        isNightSection: false
+      },
+      
+      // CPET 201 - 2D Animation
+      {
+        sectionCode: 'DCPET 2-1',
+        courseId: courses.find(c => c.code === 'CPET 201')?.id,
+        status: 'Planning',
+        classType: 'Laboratory',
+        semester: 'First',
+        academicYear: '2025-2026',
+        maxStudents: 30,
+        enrolledStudents: 0,
+        room: 'TBA',
+        timeSlots: [
+          { dayOfWeek: 2, startTime: '10:30', endTime: '13:30' },
+          { dayOfWeek: 5, startTime: '10:30', endTime: '13:30' }
+        ],
+        isNightSection: false
+      },
+      {
+        sectionCode: 'DCPET 2-2',
+        courseId: courses.find(c => c.code === 'CPET 201')?.id,
+        status: 'Planning',
+        classType: 'Laboratory',
+        semester: 'First',
+        academicYear: '2025-2026',
+        maxStudents: 30,
+        enrolledStudents: 0,
+        room: 'TBA',
+        timeSlots: [
+          { dayOfWeek: 1, startTime: '16:30', endTime: '19:30' },
+          { dayOfWeek: 4, startTime: '16:30', endTime: '19:30' }
+        ],
+        isNightSection: true
+      },
+      {
+        sectionCode: 'DCPET 2-3',
+        courseId: courses.find(c => c.code === 'CPET 201')?.id,
+        status: 'Planning',
+        classType: 'Laboratory',
+        semester: 'First',
+        academicYear: '2025-2026',
+        maxStudents: 30,
+        enrolledStudents: 0,
+        room: 'TBA',
+        timeSlots: [
+          { dayOfWeek: 3, startTime: '16:30', endTime: '19:30' },
+          { dayOfWeek: 6, startTime: '10:30', endTime: '13:30' }
+        ],
+        isNightSection: true
+      },
+      
+      // ELEC 201 - Fundamentals of Electronics Circuits
+      {
+        sectionCode: 'DCPET 2-1',
+        courseId: courses.find(c => c.code === 'ELEC 201')?.id,
+        status: 'Planning',
+        classType: 'Combined',
+        semester: 'First',
+        academicYear: '2025-2026',
+        maxStudents: 30,
+        enrolledStudents: 0,
+        room: 'TBA',
+        timeSlots: [
+          { dayOfWeek: 5, startTime: '13:30', endTime: '16:30' },
+          { dayOfWeek: 6, startTime: '13:30', endTime: '15:30' }
+        ],
+        isNightSection: false
+      },
+      {
+        sectionCode: 'DCPET 2-2',
+        courseId: courses.find(c => c.code === 'ELEC 201')?.id,
+        status: 'Planning',
+        classType: 'Combined',
+        semester: 'First',
+        academicYear: '2025-2026',
+        maxStudents: 30,
+        enrolledStudents: 0,
+        room: 'TBA',
+        timeSlots: [
+          { dayOfWeek: 1, startTime: '10:30', endTime: '13:30' },
+          { dayOfWeek: 4, startTime: '18:00', endTime: '20:00' }
+        ],
+        isNightSection: true
+      },
+      {
+        sectionCode: 'DCPET 2-3',
+        courseId: courses.find(c => c.code === 'ELEC 201')?.id,
+        status: 'Planning',
+        classType: 'Combined',
+        semester: 'First',
+        academicYear: '2025-2026',
+        maxStudents: 30,
+        enrolledStudents: 0,
+        room: 'TBA',
+        timeSlots: [
+          { dayOfWeek: 2, startTime: '13:30', endTime: '16:30' },
+          { dayOfWeek: 5, startTime: '16:30', endTime: '18:30' }
+        ],
+        isNightSection: true
+      },
+      
+      // ELEC 202 - Fundamentals of Electrical Circuits
+      {
+        sectionCode: 'DCPET 2-1',
+        courseId: courses.find(c => c.code === 'ELEC 202')?.id,
+        status: 'Planning',
+        classType: 'Combined',
+        semester: 'First',
+        academicYear: '2025-2026',
+        maxStudents: 30,
+        enrolledStudents: 0,
+        room: 'TBA',
+        timeSlots: [
+          { dayOfWeek: 3, startTime: '07:30', endTime: '10:30' },
+          { dayOfWeek: 6, startTime: '16:30', endTime: '18:30' }
+        ],
+        isNightSection: true
+      },
+      {
+        sectionCode: 'DCPET 2-2',
+        courseId: courses.find(c => c.code === 'ELEC 202')?.id,
+        status: 'Planning',
+        classType: 'Combined',
+        semester: 'First',
+        academicYear: '2025-2026',
+        maxStudents: 30,
+        enrolledStudents: 0,
+        room: 'TBA',
+        timeSlots: [
+          { dayOfWeek: 1, startTime: '18:00', endTime: '21:00' },
+          { dayOfWeek: 4, startTime: '20:00', endTime: '22:00' }
+        ],
+        isNightSection: true
+      },
+      {
+        sectionCode: 'DCPET 2-3',
+        courseId: courses.find(c => c.code === 'ELEC 202')?.id,
+        status: 'Planning',
+        classType: 'Combined',
+        semester: 'First',
+        academicYear: '2025-2026',
+        maxStudents: 30,
+        enrolledStudents: 0,
+        room: 'TBA',
+        timeSlots: [
+          { dayOfWeek: 5, startTime: '07:30', endTime: '10:30' },
+          { dayOfWeek: 6, startTime: '07:30', endTime: '09:30' }
+        ],
+        isNightSection: false
+      },
+      
+      // FIL 201 - Filipinolohiya at Pambansang Kaulanran
+      {
+        sectionCode: 'DCPET 2-1',
+        courseId: courses.find(c => c.code === 'FIL 201')?.id,
+        status: 'Planning',
+        classType: 'Lecture',
+        semester: 'First',
+        academicYear: '2025-2026',
+        maxStudents: 30,
+        enrolledStudents: 0,
+        room: 'TBA',
+        timeSlots: [
+          { dayOfWeek: 3, startTime: '16:30', endTime: '19:30' }
+        ],
+        isNightSection: true
+      },
+      {
+        sectionCode: 'DCPET 2-2',
+        courseId: courses.find(c => c.code === 'FIL 201')?.id,
+        status: 'Planning',
+        classType: 'Lecture',
+        semester: 'First',
+        academicYear: '2025-2026',
+        maxStudents: 30,
+        enrolledStudents: 0,
+        room: 'TBA',
+        timeSlots: [
+          { dayOfWeek: 5, startTime: '18:00', endTime: '21:00' }
+        ],
+        isNightSection: true
+      },
+      {
+        sectionCode: 'DCPET 2-3',
+        courseId: courses.find(c => c.code === 'FIL 201')?.id,
+        status: 'Planning',
+        classType: 'Lecture',
+        semester: 'First',
+        academicYear: '2025-2026',
+        maxStudents: 30,
+        enrolledStudents: 0,
+        room: 'TBA',
+        timeSlots: [
+          { dayOfWeek: 2, startTime: '13:30', endTime: '16:30' }
+        ],
+        isNightSection: false
+      },
+      
+      // PE 203 - Physical Activity Towards Health and Fitness 3
+      {
+        sectionCode: 'DCPET 2-1',
+        courseId: courses.find(c => c.code === 'PE 203')?.id,
+        status: 'Planning',
+        classType: 'Laboratory',
+        semester: 'First',
+        academicYear: '2025-2026',
+        maxStudents: 30,
+        enrolledStudents: 0,
+        room: 'TBA',
+        timeSlots: [
+          { dayOfWeek: 6, startTime: '15:30', endTime: '17:30' }
+        ],
+        isNightSection: false
+      },
+      {
+        sectionCode: 'DCPET 2-2',
+        courseId: courses.find(c => c.code === 'PE 203')?.id,
+        status: 'Planning',
+        classType: 'Laboratory',
+        semester: 'First',
+        academicYear: '2025-2026',
+        maxStudents: 30,
+        enrolledStudents: 0,
+        room: 'TBA',
+        timeSlots: [
+          { dayOfWeek: 6, startTime: '13:30', endTime: '15:30' }
+        ],
+        isNightSection: false
+      },
+      {
+        sectionCode: 'DCPET 2-3',
+        courseId: courses.find(c => c.code === 'PE 203')?.id,
+        status: 'Planning',
+        classType: 'Laboratory',
+        semester: 'First',
+        academicYear: '2025-2026',
+        maxStudents: 30,
+        enrolledStudents: 0,
+        room: 'TBA',
+        timeSlots: [
+          { dayOfWeek: 6, startTime: '10:30', endTime: '12:30' }
+        ],
+        isNightSection: false
+      },
+      
+      // ===== DCPET 3-1, 3-2, 3-3 Sections (3rd Year Courses) =====
+      // CMPE 301 - Computer Engineering Drafting and Design
+      {
+        sectionCode: 'DCPET 3-1',
+        courseId: courses.find(c => c.code === 'CMPE 301')?.id,
+        status: 'Planning',
+        classType: 'Combined',
+        semester: 'First',
+        academicYear: '2025-2026',
+        maxStudents: 30,
+        enrolledStudents: 0,
+        room: 'TBA',
+        timeSlots: [
+          { dayOfWeek: 1, startTime: '07:30', endTime: '10:30' },
+          { dayOfWeek: 4, startTime: '07:30', endTime: '09:30' }
+        ],
+        isNightSection: false
+      },
+      {
+        sectionCode: 'DCPET 3-2',
+        courseId: courses.find(c => c.code === 'CMPE 301')?.id,
+        status: 'Planning',
+        classType: 'Combined',
+        semester: 'First',
+        academicYear: '2025-2026',
+        maxStudents: 30,
+        enrolledStudents: 0,
+        room: 'TBA',
+        timeSlots: [
+          { dayOfWeek: 2, startTime: '16:30', endTime: '19:30' },
+          { dayOfWeek: 5, startTime: '16:30', endTime: '18:30' }
+        ],
+        isNightSection: true
+      },
+      {
+        sectionCode: 'DCPET 3-3',
+        courseId: courses.find(c => c.code === 'CMPE 301')?.id,
+        status: 'Planning',
+        classType: 'Combined',
+        semester: 'First',
+        academicYear: '2025-2026',
+        maxStudents: 30,
+        enrolledStudents: 0,
+        room: 'TBA',
+        timeSlots: [
+          { dayOfWeek: 3, startTime: '10:30', endTime: '13:30' },
+          { dayOfWeek: 6, startTime: '07:30', endTime: '09:30' }
+        ],
+        isNightSection: false
+      },
+      
+      // CMPE 302 - Data and Digital Communications
+      {
+        sectionCode: 'DCPET 3-1',
+        courseId: courses.find(c => c.code === 'CMPE 302')?.id,
+        status: 'Planning',
+        classType: 'Combined',
+        semester: 'First',
+        academicYear: '2025-2026',
+        maxStudents: 30,
+        enrolledStudents: 0,
+        room: 'TBA',
+        timeSlots: [
+          { dayOfWeek: 1, startTime: '10:30', endTime: '13:30' },
+          { dayOfWeek: 4, startTime: '10:30', endTime: '12:30' }
+        ],
+        isNightSection: false
+      },
+      {
+        sectionCode: 'DCPET 3-2',
+        courseId: courses.find(c => c.code === 'CMPE 302')?.id,
+        status: 'Planning',
+        classType: 'Combined',
+        semester: 'First',
+        academicYear: '2025-2026',
+        maxStudents: 30,
+        enrolledStudents: 0,
+        room: 'TBA',
+        timeSlots: [
+          { dayOfWeek: 3, startTime: '07:30', endTime: '10:30' },
+          { dayOfWeek: 6, startTime: '10:30', endTime: '12:30' }
+        ],
+        isNightSection: false
+      },
+      {
+        sectionCode: 'DCPET 3-3',
+        courseId: courses.find(c => c.code === 'CMPE 302')?.id,
+        status: 'Planning',
+        classType: 'Combined',
+        semester: 'First',
+        academicYear: '2025-2026',
+        maxStudents: 30,
+        enrolledStudents: 0,
+        room: 'TBA',
+        timeSlots: [
+          { dayOfWeek: 2, startTime: '07:30', endTime: '10:30' },
+          { dayOfWeek: 5, startTime: '07:30', endTime: '09:30' }
+        ],
+        isNightSection: false
+      },
+      
+      // CPE 301 - CPE Laws and Professional Practice
+      {
+        sectionCode: 'DCPET 3-1',
+        courseId: courses.find(c => c.code === 'CPE 301')?.id,
+        status: 'Planning',
+        classType: 'Lecture',
+        semester: 'First',
+        academicYear: '2025-2026',
+        maxStudents: 30,
+        enrolledStudents: 0,
+        room: 'TBA',
+        timeSlots: [
+          { dayOfWeek: 1, startTime: '13:30', endTime: '16:30' }
+        ],
+        isNightSection: false
+      },
+      {
+        sectionCode: 'DCPET 3-2',
+        courseId: courses.find(c => c.code === 'CPE 301')?.id,
+        status: 'Planning',
+        classType: 'Lecture',
+        semester: 'First',
+        academicYear: '2025-2026',
+        maxStudents: 30,
+        enrolledStudents: 0,
+        room: 'TBA',
+        timeSlots: [
+          { dayOfWeek: 3, startTime: '16:30', endTime: '19:30' }
+        ],
+        isNightSection: true
+      },
+      {
+        sectionCode: 'DCPET 3-3',
+        courseId: courses.find(c => c.code === 'CPE 301')?.id,
+        status: 'Planning',
+        classType: 'Lecture',
+        semester: 'First',
+        academicYear: '2025-2026',
+        maxStudents: 30,
+        enrolledStudents: 0,
+        room: 'TBA',
+        timeSlots: [
+          { dayOfWeek: 4, startTime: '13:30', endTime: '16:30' }
+        ],
+        isNightSection: false
+      },
+      
+      // CMPE 303 - Microprocessors
+      {
+        sectionCode: 'DCPET 3-1',
+        courseId: courses.find(c => c.code === 'CMPE 303')?.id,
+        status: 'Planning',
+        classType: 'Combined',
+        semester: 'First',
+        academicYear: '2025-2026',
+        maxStudents: 30,
+        enrolledStudents: 0,
+        room: 'TBA',
+        timeSlots: [
+          { dayOfWeek: 2, startTime: '10:30', endTime: '13:30' },
+          { dayOfWeek: 5, startTime: '10:30', endTime: '12:30' }
+        ],
+        isNightSection: false
+      },
+      {
+        sectionCode: 'DCPET 3-2',
+        courseId: courses.find(c => c.code === 'CMPE 303')?.id,
+        status: 'Planning',
+        classType: 'Combined',
+        semester: 'First',
+        academicYear: '2025-2026',
+        maxStudents: 30,
+        enrolledStudents: 0,
+        room: 'TBA',
+        timeSlots: [
+          { dayOfWeek: 1, startTime: '16:30', endTime: '19:30' },
+          { dayOfWeek: 4, startTime: '16:30', endTime: '18:30' }
+        ],
+        isNightSection: true
+      },
+      {
+        sectionCode: 'DCPET 3-3',
+        courseId: courses.find(c => c.code === 'CMPE 303')?.id,
+        status: 'Planning',
+        classType: 'Combined',
+        semester: 'First',
+        academicYear: '2025-2026',
+        maxStudents: 30,
+        enrolledStudents: 0,
+        room: 'TBA',
+        timeSlots: [
+          { dayOfWeek: 3, startTime: '13:30', endTime: '16:30' },
+          { dayOfWeek: 6, startTime: '13:30', endTime: '15:30' }
+        ],
+        isNightSection: false
+      },
+      
+      // CPE 302 - CPE Professional Course 3
+      {
+        sectionCode: 'DCPET 3-1',
+        courseId: courses.find(c => c.code === 'CPE 302')?.id,
+        status: 'Planning',
+        classType: 'Lecture',
+        semester: 'First',
+        academicYear: '2025-2026',
+        maxStudents: 30,
+        enrolledStudents: 0,
+        room: 'TBA',
+        timeSlots: [
+          { dayOfWeek: 2, startTime: '13:30', endTime: '16:30' }
+        ],
+        isNightSection: false
+      },
+      {
+        sectionCode: 'DCPET 3-2',
+        courseId: courses.find(c => c.code === 'CPE 302')?.id,
+        status: 'Planning',
+        classType: 'Lecture',
+        semester: 'First',
+        academicYear: '2025-2026',
+        maxStudents: 30,
+        enrolledStudents: 0,
+        room: 'TBA',
+        timeSlots: [
+          { dayOfWeek: 4, startTime: '18:30', endTime: '21:30' }
+        ],
+        isNightSection: true
+      },
+      {
+        sectionCode: 'DCPET 3-3',
+        courseId: courses.find(c => c.code === 'CPE 302')?.id,
+        status: 'Planning',
+        classType: 'Lecture',
+        semester: 'First',
+        academicYear: '2025-2026',
+        maxStudents: 30,
+        enrolledStudents: 0,
+        room: 'TBA',
+        timeSlots: [
+          { dayOfWeek: 5, startTime: '13:30', endTime: '16:30' }
+        ],
+        isNightSection: false
+      },
+      
+      // CPET 301 - CpET Project Development 1
+      {
+        sectionCode: 'DCPET 3-1',
+        courseId: courses.find(c => c.code === 'CPET 301')?.id,
+        status: 'Planning',
+        classType: 'Laboratory',
+        semester: 'First',
+        academicYear: '2025-2026',
+        maxStudents: 30,
+        enrolledStudents: 0,
+        room: 'TBA',
+        timeSlots: [
+          { dayOfWeek: 3, startTime: '07:30', endTime: '10:30' },
+          { dayOfWeek: 6, startTime: '16:30', endTime: '18:30' }
+        ],
+        isNightSection: true
+      },
+      {
+        sectionCode: 'DCPET 3-2',
+        courseId: courses.find(c => c.code === 'CPET 301')?.id,
+        status: 'Planning',
+        classType: 'Laboratory',
+        semester: 'First',
+        academicYear: '2025-2026',
+        maxStudents: 30,
+        enrolledStudents: 0,
+        room: 'TBA',
+        timeSlots: [
+          { dayOfWeek: 1, startTime: '18:00', endTime: '21:00' },
+          { dayOfWeek: 4, startTime: '19:30', endTime: '21:30' }
+        ],
+        isNightSection: true
+      },
+      {
+        sectionCode: 'DCPET 3-3',
+        courseId: courses.find(c => c.code === 'CPET 301')?.id,
+        status: 'Planning',
+        classType: 'Laboratory',
+        semester: 'First',
+        academicYear: '2025-2026',
+        maxStudents: 30,
+        enrolledStudents: 0,
+        room: 'TBA',
+        timeSlots: [
+          { dayOfWeek: 2, startTime: '18:00', endTime: '21:00' },
+          { dayOfWeek: 5, startTime: '18:00', endTime: '20:00' }
+        ],
+        isNightSection: true
+      },
+      
+      // CPET 302 - Database Management System 2
+      {
+        sectionCode: 'DCPET 3-1',
+        courseId: courses.find(c => c.code === 'CPET 302')?.id,
+        status: 'Planning',
+        classType: 'Combined',
+        semester: 'First',
+        academicYear: '2025-2026',
+        maxStudents: 30,
+        enrolledStudents: 0,
+        room: 'TBA',
+        timeSlots: [
+          { dayOfWeek: 1, startTime: '18:30', endTime: '21:30' },
+          { dayOfWeek: 4, startTime: '21:30', endTime: '22:30' }
+        ],
+        isNightSection: true
+      },
+      {
+        sectionCode: 'DCPET 3-2',
+        courseId: courses.find(c => c.code === 'CPET 302')?.id,
+        status: 'Planning',
+        classType: 'Combined',
+        semester: 'First',
+        academicYear: '2025-2026',
+        maxStudents: 30,
+        enrolledStudents: 0,
+        room: 'TBA',
+        timeSlots: [
+          { dayOfWeek: 3, startTime: '19:30', endTime: '22:30' },
+          { dayOfWeek: 6, startTime: '18:30', endTime: '20:30' }
+        ],
+        isNightSection: true
+      },
+      {
+        sectionCode: 'DCPET 3-3',
+        courseId: courses.find(c => c.code === 'CPET 302')?.id,
+        status: 'Planning',
+        classType: 'Combined',
+        semester: 'First',
+        academicYear: '2025-2026',
+        maxStudents: 30,
+        enrolledStudents: 0,
+        room: 'TBA',
+        timeSlots: [
+          { dayOfWeek: 5, startTime: '19:00', endTime: '22:00' },
+          { dayOfWeek: 6, startTime: '20:30', endTime: '22:30' }
+        ],
+        isNightSection: true
+      },
+      
+      // ENG 301 - Technical Communication
+      {
+        sectionCode: 'DCPET 3-1',
+        courseId: courses.find(c => c.code === 'ENG 301')?.id,
+        status: 'Planning',
+        classType: 'Lecture',
+        semester: 'First',
+        academicYear: '2025-2026',
+        maxStudents: 30,
+        enrolledStudents: 0,
+        room: 'TBA',
+        timeSlots: [
+          { dayOfWeek: 5, startTime: '16:30', endTime: '19:30' }
+        ],
+        isNightSection: true
+      },
+      {
+        sectionCode: 'DCPET 3-2',
+        courseId: courses.find(c => c.code === 'ENG 301')?.id,
+        status: 'Planning',
+        classType: 'Lecture',
+        semester: 'First',
+        academicYear: '2025-2026',
+        maxStudents: 30,
+        enrolledStudents: 0,
+        room: 'TBA',
+        timeSlots: [
+          { dayOfWeek: 6, startTime: '15:30', endTime: '18:30' }
+        ],
+        isNightSection: true
+      },
+      {
+        sectionCode: 'DCPET 3-3',
+        courseId: courses.find(c => c.code === 'ENG 301')?.id,
+        status: 'Planning',
+        classType: 'Lecture',
+        semester: 'First',
+        academicYear: '2025-2026',
+        maxStudents: 30,
+        enrolledStudents: 0,
+        room: 'TBA',
+        timeSlots: [
+          { dayOfWeek: 3, startTime: '20:00', endTime: '23:00' }
         ],
         isNightSection: true
       }
@@ -847,8 +1934,8 @@ export class DatabaseSeeder {
             startTime: startTime,
             endTime: endTime,
           },
-          semester: 'Second',
-          academicYear: '2024-2025',
+          semester: 'First',
+          academicYear: '2025-2026',
           section: data.section,
           room: data.room === 'TBA' ? undefined : data.room,
           creditHours: course.credits,

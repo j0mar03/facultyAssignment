@@ -38,7 +38,8 @@ import {
   Assignment as AssignmentIcon,
   Schedule as ScheduleIcon,
   Person as PersonIcon,
-  School as SchoolIcon
+  School as SchoolIcon,
+  Refresh as RefreshIcon
 } from '@mui/icons-material';
 import { sectionService } from '../services/sectionService';
 import { courseService } from '../services/courseService';
@@ -48,6 +49,8 @@ import SectionCalendar from '../components/SectionCalendar';
 interface Section {
   id: string;
   sectionCode: string;
+  courseId?: string;
+  facultyId?: string;
   course: {
     id: string;
     code: string;
@@ -73,6 +76,9 @@ interface Section {
     endTime: string;
   }>;
   isNightSection: boolean;
+  lectureHours?: number;
+  laboratoryHours?: number;
+  notes?: string;
   hasConflicts?: boolean;
   conflicts?: any[];
 }
@@ -108,7 +114,10 @@ const Sections: React.FC = () => {
     academicYear: '2025-2026',
     status: '',
     unassigned: false,
-    hasConflicts: false
+    hasConflicts: false,
+    sectionCode: '',
+    courseId: '',
+    facultyId: ''
   });
 
   // Form state
@@ -124,6 +133,8 @@ const Sections: React.FC = () => {
     enrolledStudents: 0,
     room: '',
     isNightSection: false,
+    lectureHours: 0,
+    laboratoryHours: 0,
     notes: '',
     timeSlots: [] as Array<{
       dayOfWeek: number;
@@ -144,7 +155,10 @@ const Sections: React.FC = () => {
       const sectionsResponse = await sectionService.getAllSections({
         ...filters,
         hasConflicts: filters.hasConflicts ? 'true' : undefined,
-        unassigned: filters.unassigned ? 'true' : undefined
+        unassigned: filters.unassigned ? 'true' : undefined,
+        sectionCode: filters.sectionCode || undefined,
+        courseId: filters.courseId || undefined,
+        facultyId: filters.facultyId || undefined
       });
       
       // Transform sections to include fullName for faculty
@@ -207,11 +221,15 @@ const Sections: React.FC = () => {
   };
 
   const handleEditSection = (section: Section) => {
+    console.log('Edit button clicked for section:', section);
+    console.log('Section course:', section.course);
+    console.log('Section faculty:', section.faculty);
+    
     setEditingSection(section);
-    setFormData({
+    const formDataToSet = {
       sectionCode: section.sectionCode,
-      courseId: section.course.id,
-      facultyId: section.faculty?.id || '',
+      courseId: section.course?.id || section.courseId || '',
+      facultyId: section.faculty?.id || section.facultyId || '',
       status: section.status,
       classType: section.classType,
       semester: section.semester,
@@ -220,23 +238,63 @@ const Sections: React.FC = () => {
       enrolledStudents: section.enrolledStudents,
       room: section.room || '',
       isNightSection: section.isNightSection,
-      notes: '',
+      lectureHours: section.lectureHours || 0,
+      laboratoryHours: section.laboratoryHours || 0,
+      notes: section.notes || '',
       timeSlots: section.timeSlots || []
-    });
+    };
+    
+    console.log('Setting form data:', formDataToSet);
+    setFormData(formDataToSet);
     setOpenDialog(true);
   };
 
   const handleSaveSection = async () => {
+    console.log('Save button clicked');
+    console.log('Editing section:', editingSection);
+    console.log('Form data being sent:', JSON.stringify(formData, null, 2));
+    
     try {
       if (editingSection) {
+        console.log('Updating section with ID:', editingSection.id);
+        console.log('Data being sent to updateSection:', {
+          id: editingSection.id,
+          data: formData
+        });
         await sectionService.updateSection(editingSection.id, formData);
       } else {
+        console.log('Creating new section');
         await sectionService.createSection(formData);
       }
+      // Clear the editing state and close dialog
+      setEditingSection(null);
       setOpenDialog(false);
+      // Reset form data
+      setFormData({
+        sectionCode: '',
+        courseId: '',
+        facultyId: '',
+        status: 'Planning',
+        classType: 'Regular',
+        semester: 'First',
+        academicYear: '2025-2026',
+        maxStudents: 40,
+        enrolledStudents: 0,
+        room: '',
+        isNightSection: false,
+        lectureHours: 0,
+        laboratoryHours: 0,
+        notes: '',
+        timeSlots: []
+      });
       loadData();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving section:', error);
+      console.error('Error response:', error.response);
+      console.error('Error data:', error.response?.data);
+      // Keep dialog open on error so user can see what happened
+      const errorMessage = error.response?.data?.message || error.response?.data?.error || 'Error saving section. Check console for details.';
+      alert(errorMessage);
     }
   };
 
@@ -413,10 +471,24 @@ const Sections: React.FC = () => {
     </Grid>
   );
 
+  const resetFilters = () => {
+    setFilters({
+      semester: 'First',
+      academicYear: '2025-2026',
+      status: '',
+      unassigned: false,
+      hasConflicts: false,
+      sectionCode: '',
+      courseId: '',
+      facultyId: ''
+    });
+  };
+
   const SectionsListTab = () => (
     <Box>
       {/* Filters */}
-      <Box sx={{ mb: 3, display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center' }}>
+      <Box sx={{ mb: 3 }}>
+        <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center', mb: 2 }}>
         <FormControl size="small" sx={{ minWidth: 120 }}>
           <InputLabel>Semester</InputLabel>
           <Select
@@ -442,31 +514,102 @@ const Sections: React.FC = () => {
             <MenuItem value="Active">Active</MenuItem>
           </Select>
         </FormControl>
-        
-        <Button
-          variant={filters.unassigned ? "contained" : "outlined"}
-          onClick={() => setFilters({ ...filters, unassigned: !filters.unassigned })}
-          startIcon={<WarningIcon />}
-        >
-          Unassigned Only
-        </Button>
-        
-        <Button
-          variant={filters.hasConflicts ? "contained" : "outlined"}
-          color="error"
-          onClick={() => setFilters({ ...filters, hasConflicts: !filters.hasConflicts })}
-          startIcon={<WarningIcon />}
-        >
-          Conflicts Only
-        </Button>
 
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={handleCreateSection}
-        >
-          Add Section
-        </Button>
+        <FormControl size="small" sx={{ minWidth: 150 }}>
+          <InputLabel>Section</InputLabel>
+          <Select
+            value={filters.sectionCode}
+            label="Section"
+            onChange={(e) => setFilters({ ...filters, sectionCode: e.target.value })}
+          >
+            <MenuItem value="">All Sections</MenuItem>
+            {Array.from(new Set(sections.map(s => s.sectionCode))).sort().map(code => (
+              <MenuItem key={code} value={code}>{code}</MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+
+        <FormControl size="small" sx={{ minWidth: 200 }}>
+          <InputLabel>Course</InputLabel>
+          <Select
+            value={filters.courseId}
+            label="Course"
+            onChange={(e) => setFilters({ ...filters, courseId: e.target.value })}
+          >
+            <MenuItem value="">All Courses</MenuItem>
+            {courses.map(course => (
+              <MenuItem key={course.id} value={course.id}>
+                {course.code} - {course.name}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+
+        <FormControl size="small" sx={{ minWidth: 200 }}>
+          <InputLabel>Faculty</InputLabel>
+          <Select
+            value={filters.facultyId}
+            label="Faculty"
+            onChange={(e) => setFilters({ ...filters, facultyId: e.target.value })}
+          >
+            <MenuItem value="">All Faculty</MenuItem>
+            {faculty.map(f => (
+              <MenuItem key={f.id} value={f.id}>
+                {f.fullName || `${f.firstName} ${f.lastName}`}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+        
+        </Box>
+        <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center' }}>
+          <Button
+            variant={filters.unassigned ? "contained" : "outlined"}
+            onClick={() => setFilters({ ...filters, unassigned: !filters.unassigned })}
+            startIcon={<WarningIcon />}
+          >
+            Unassigned Only
+          </Button>
+          
+          <Button
+            variant={filters.hasConflicts ? "contained" : "outlined"}
+            color="error"
+            onClick={() => setFilters({ ...filters, hasConflicts: !filters.hasConflicts })}
+            startIcon={<WarningIcon />}
+          >
+            Conflicts Only
+          </Button>
+
+          <Button
+            variant="outlined"
+            onClick={resetFilters}
+            disabled={filters.status === '' && filters.sectionCode === '' && filters.courseId === '' && filters.facultyId === '' && !filters.unassigned && !filters.hasConflicts}
+          >
+            Reset Filters
+          </Button>
+
+          <Box sx={{ flexGrow: 1 }} />
+
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={handleCreateSection}
+          >
+            Add Section
+          </Button>
+        </Box>
+      </Box>
+
+      {/* Results Count */}
+      <Box sx={{ mb: 2 }}>
+        <Typography variant="body2" color="text.secondary">
+          Showing {sections.filter(section => {
+            if (filters.sectionCode && section.sectionCode !== filters.sectionCode) return false;
+            if (filters.courseId && section.courseId !== filters.courseId) return false;
+            if (filters.facultyId && section.facultyId !== filters.facultyId) return false;
+            return true;
+          }).length} of {sections.length} sections
+        </Typography>
       </Box>
 
       {/* Sections Table */}
@@ -484,7 +627,15 @@ const Sections: React.FC = () => {
             </TableRow>
           </TableHead>
           <TableBody>
-            {sections.map((section) => (
+            {sections
+              .filter(section => {
+                // Apply client-side filtering for immediate response
+                if (filters.sectionCode && section.sectionCode !== filters.sectionCode) return false;
+                if (filters.courseId && section.courseId !== filters.courseId) return false;
+                if (filters.facultyId && section.facultyId !== filters.facultyId) return false;
+                return true;
+              })
+              .map((section) => (
               <TableRow key={section.id}>
                 <TableCell>
                   <Box>
@@ -613,7 +764,10 @@ const Sections: React.FC = () => {
       )}
 
       {/* Section Dialog */}
-      <Dialog open={openDialog} onClose={() => setOpenDialog(false)} maxWidth="md" fullWidth>
+      <Dialog open={openDialog} onClose={() => {
+        console.log('Dialog closing');
+        setOpenDialog(false);
+      }} maxWidth="md" fullWidth>
         <DialogTitle>
           {editingSection ? 'Edit Section' : 'Create New Section'}
         </DialogTitle>
@@ -740,6 +894,30 @@ const Sections: React.FC = () => {
               />
             </Grid>
 
+            {/* Lecture and Laboratory Hours */}
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                type="number"
+                label="Lecture Hours"
+                value={formData.lectureHours}
+                onChange={(e) => setFormData({ ...formData, lectureHours: parseFloat(e.target.value) || 0 })}
+                inputProps={{ min: 0, step: 0.5 }}
+                helperText="Hours allocated for lecture component"
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                type="number"
+                label="Laboratory Hours"
+                value={formData.laboratoryHours}
+                onChange={(e) => setFormData({ ...formData, laboratoryHours: parseFloat(e.target.value) || 0 })}
+                inputProps={{ min: 0, step: 0.5 }}
+                helperText="Hours allocated for laboratory component"
+              />
+            </Grid>
+
             {/* Time Slots Section */}
             <Grid item xs={12}>
               <Box sx={{ mt: 2 }}>
@@ -821,7 +999,28 @@ const Sections: React.FC = () => {
           </Grid>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setOpenDialog(false)}>Cancel</Button>
+          <Button onClick={() => {
+            setOpenDialog(false);
+            setEditingSection(null);
+            // Reset form data on cancel
+            setFormData({
+              sectionCode: '',
+              courseId: '',
+              facultyId: '',
+              status: 'Planning',
+              classType: 'Regular',
+              semester: 'First',
+              academicYear: '2025-2026',
+              maxStudents: 40,
+              enrolledStudents: 0,
+              room: '',
+              isNightSection: false,
+              lectureHours: 0,
+              laboratoryHours: 0,
+              notes: '',
+              timeSlots: []
+            });
+          }}>Cancel</Button>
           <Button onClick={handleSaveSection} variant="contained">
             {editingSection ? 'Update' : 'Create'}
           </Button>
