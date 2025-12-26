@@ -106,41 +106,173 @@ export class ScheduleController {
 
   checkConflicts = async (req: Request, res: Response) => {
     try {
-      const assignments = await this.assignmentRepo.find({
-        relations: ['faculty', 'course'],
-      });
-      
       const conflicts = [];
       
+      // Check conflicts in sections (primary source for calendar)
+      // Group by semester and academic year to only check conflicts within the same term
+      const sections = await this.sectionRepo.createQueryBuilder('section')
+        .leftJoinAndSelect('section.faculty', 'faculty')
+        .leftJoinAndSelect('section.course', 'course')
+        .where('section.facultyId IS NOT NULL')
+        .andWhere('section.isActive = :isActive', { isActive: true })
+        .andWhere('section.status = :status', { status: 'Assigned' })
+        .getMany();
+      
+      // Group sections by semester and academic year
+      const sectionsByTerm = new Map<string, typeof sections>();
+      sections.forEach(section => {
+        const key = `${section.semester}-${section.academicYear}`;
+        if (!sectionsByTerm.has(key)) {
+          sectionsByTerm.set(key, []);
+        }
+        sectionsByTerm.get(key)!.push(section);
+      });
+      
+      // Check conflicts within each term separately
+      for (const [term, termSections] of sectionsByTerm.entries()) {
+        // Check faculty time conflicts - only if different sections/courses
+        for (let i = 0; i < termSections.length; i++) {
+          for (let j = i + 1; j < termSections.length; j++) {
+            const s1 = termSections[i];
+            const s2 = termSections[j];
+            
+            // Skip if same section (a section can have multiple time slots, that's not a conflict)
+            if (s1.id === s2.id) continue;
+            
+            // Faculty conflict: Same faculty, different courses/sections, overlapping time
+            if (s1.facultyId === s2.facultyId && 
+                s1.courseId !== s2.courseId && // Must be different courses
+                s1.timeSlots && s2.timeSlots) {
+              
+              // Check if any time slots overlap
+              for (const slot1 of s1.timeSlots) {
+                for (const slot2 of s2.timeSlots) {
+                  if (slot1.dayOfWeek === slot2.dayOfWeek) {
+                    const start1 = this.timeToMinutes(slot1.startTime);
+                    const end1 = this.timeToMinutes(slot1.endTime);
+                    const start2 = this.timeToMinutes(slot2.startTime);
+                    const end2 = this.timeToMinutes(slot2.endTime);
+                    
+                    // Check for actual time overlap (not just same time)
+                    if (start1 < end2 && start2 < end1) {
+                      conflicts.push({
+                        faculty: s1.faculty?.fullName || `${s1.faculty?.firstName} ${s1.faculty?.lastName}`,
+                        course1: s1.course.code,
+                        course2: s2.course.code,
+                        section1: s1.sectionCode,
+                        section2: s2.sectionCode,
+                        day: slot1.dayOfWeek,
+                        time1: `${slot1.startTime}-${slot1.endTime}`,
+                        time2: `${slot2.startTime}-${slot2.endTime}`,
+                        type: 'faculty',
+                        semester: s1.semester,
+                        academicYear: s1.academicYear,
+                      });
+                    }
+                  }
+                }
+              }
+            }
+            
+            // Room conflict: Same room, different sections, overlapping time
+            if (s1.room && s2.room && 
+                s1.room.trim() === s2.room.trim() && // Same room (trimmed for comparison)
+                s1.id !== s2.id && // Different sections
+                s1.timeSlots && s2.timeSlots) {
+              
+              for (const slot1 of s1.timeSlots) {
+                for (const slot2 of s2.timeSlots) {
+                  if (slot1.dayOfWeek === slot2.dayOfWeek) {
+                    const start1 = this.timeToMinutes(slot1.startTime);
+                    const end1 = this.timeToMinutes(slot1.endTime);
+                    const start2 = this.timeToMinutes(slot2.startTime);
+                    const end2 = this.timeToMinutes(slot2.endTime);
+                    
+                    // Check for actual time overlap
+                    if (start1 < end2 && start2 < end1) {
+                      conflicts.push({
+                        faculty: `Room: ${s1.room}`,
+                        course1: s1.course.code,
+                        course2: s2.course.code,
+                        section1: s1.sectionCode,
+                        section2: s2.sectionCode,
+                        room: s1.room,
+                        day: slot1.dayOfWeek,
+                        time1: `${slot1.startTime}-${slot1.endTime}`,
+                        time2: `${slot2.startTime}-${slot2.endTime}`,
+                        type: 'room',
+                        semester: s1.semester,
+                        academicYear: s1.academicYear,
+                      });
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+      
+      // Also check assignments for backward compatibility (only if they're not already covered by sections)
+      // Only check assignments that don't have corresponding sections
+      const assignments = await this.assignmentRepo.find({
+        relations: ['faculty', 'course'],
+        where: { status: 'Active' }
+      });
+      
+      // Only check assignments that are in different courses (same logic as sections)
       for (let i = 0; i < assignments.length; i++) {
         for (let j = i + 1; j < assignments.length; j++) {
           const a1 = assignments[i];
           const a2 = assignments[j];
           
-          if (a1.facultyId === a2.facultyId &&
+          // Must be same faculty, different courses, same semester/academic year
+          if (a1.facultyId === a2.facultyId && 
+              a1.courseId !== a2.courseId &&
+              a1.semester === a2.semester &&
+              a1.academicYear === a2.academicYear &&
+              a1.timeSlot && a2.timeSlot &&
               a1.timeSlot.dayOfWeek === a2.timeSlot.dayOfWeek) {
-            // Check time overlap
+            
             const start1 = this.timeToMinutes(a1.timeSlot.startTime);
             const end1 = this.timeToMinutes(a1.timeSlot.endTime);
             const start2 = this.timeToMinutes(a2.timeSlot.startTime);
             const end2 = this.timeToMinutes(a2.timeSlot.endTime);
             
+            // Check for actual time overlap
             if (start1 < end2 && start2 < end1) {
               conflicts.push({
-                faculty: a1.faculty.fullName,
-                course1: a1.course.code,
-                course2: a2.course.code,
+                faculty: a1.faculty?.fullName || 'Unknown',
+                course1: a1.course?.code || 'Unknown',
+                course2: a2.course?.code || 'Unknown',
                 day: a1.timeSlot.dayOfWeek,
                 time1: `${a1.timeSlot.startTime}-${a1.timeSlot.endTime}`,
                 time2: `${a2.timeSlot.startTime}-${a2.timeSlot.endTime}`,
+                type: 'faculty',
+                semester: a1.semester,
+                academicYear: a1.academicYear,
               });
             }
           }
         }
       }
       
-      res.json({ conflicts });
+      // Remove duplicates - conflicts are unique if they have same faculty/room, courses, day, and times
+      const uniqueConflicts = conflicts.filter((conflict, index, self) =>
+        index === self.findIndex((c) => 
+          c.faculty === conflict.faculty &&
+          ((c.course1 === conflict.course1 && c.course2 === conflict.course2) ||
+           (c.course1 === conflict.course2 && c.course2 === conflict.course1)) &&
+          c.day === conflict.day &&
+          c.time1 === conflict.time1 &&
+          c.time2 === conflict.time2 &&
+          c.type === conflict.type
+        )
+      );
+      
+      res.json({ conflicts: uniqueConflicts });
     } catch (error) {
+      console.error('Conflict check error:', error);
       res.status(500).json({ error: 'Failed to check conflicts' });
     }
   };
@@ -207,11 +339,26 @@ export class ScheduleController {
   }
 
   private getEventDateTime(dayOfWeek: number, time: string): string {
+    // Use a fixed reference week (current week starting from Monday)
+    // This ensures dates don't shift when viewing the calendar
     const today = new Date();
     const currentDay = today.getDay();
-    const daysUntilTarget = (dayOfWeek - currentDay + 7) % 7;
-    const targetDate = new Date(today);
-    targetDate.setDate(today.getDate() + daysUntilTarget);
+    
+    // Calculate Monday of current week (day 1 = Monday)
+    // JavaScript: 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+    // Our system: 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+    const mondayOffset = currentDay === 0 ? -6 : 1 - currentDay; // If Sunday, go back 6 days; otherwise go to Monday
+    const mondayOfWeek = new Date(today);
+    mondayOfWeek.setDate(today.getDate() + mondayOffset);
+    mondayOfWeek.setHours(0, 0, 0, 0);
+    
+    // Calculate target day from Monday (0 = Sunday, 1 = Monday, etc.)
+    // Adjust for JavaScript's day numbering (0 = Sunday)
+    const jsDayOfWeek = dayOfWeek === 0 ? 0 : dayOfWeek; // Sunday stays 0
+    const daysFromMonday = jsDayOfWeek === 0 ? 6 : jsDayOfWeek - 1; // Sunday is 6 days from Monday
+    
+    const targetDate = new Date(mondayOfWeek);
+    targetDate.setDate(mondayOfWeek.getDate() + daysFromMonday);
     
     const [hours, minutes] = time.split(':').map(Number);
     targetDate.setHours(hours, minutes, 0, 0);
@@ -233,6 +380,7 @@ export class ScheduleController {
         PartTime: { regular: 12, extra: 0 },
         Temporary: { regular: 21, extra: 9 },
         Designee: { regular: 18, extra: 6 },
+        AdminFaculty: { regular: 0, extra: 15 }, // All load is extra (part-time hours)
       };
       
       const limits = loadLimits[faculty.type as keyof typeof loadLimits] || { regular: 21, extra: 9 };

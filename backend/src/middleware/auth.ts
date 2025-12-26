@@ -24,7 +24,15 @@ export const authMiddleware = (req: AuthRequest, res: Response, next: NextFuncti
       role: decoded.role,
     };
     next();
-  } catch (error) {
+  } catch (error: any) {
+    // Log error details for debugging (but don't expose sensitive info to client)
+    if (error.name === 'TokenExpiredError') {
+      console.log('Token expired for request:', req.path);
+    } else if (error.name === 'JsonWebTokenError') {
+      console.log('Invalid token signature for request:', req.path);
+    } else {
+      console.log('Token verification error:', error.message);
+    }
     return res.status(401).json({ error: 'Invalid token' });
   }
 };

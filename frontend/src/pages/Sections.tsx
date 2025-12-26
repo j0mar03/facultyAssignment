@@ -28,7 +28,8 @@ import {
   Paper,
   IconButton,
   Tooltip,
-  LinearProgress
+  LinearProgress,
+  Autocomplete
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -142,6 +143,10 @@ const Sections: React.FC = () => {
       endTime: string;
     }>
   });
+
+  // Available rooms state
+  const [availableRooms, setAvailableRooms] = useState<string[]>([]);
+  const [loadingRooms, setLoadingRooms] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -357,6 +362,68 @@ const Sections: React.FC = () => {
       timeSlots: newTimeSlots
     });
   };
+
+  // Fetch available rooms based on time slots
+  const fetchAvailableRooms = async () => {
+    if (formData.timeSlots.length === 0 || !formData.semester || !formData.academicYear) {
+      setAvailableRooms([]);
+      return;
+    }
+
+    // Filter out incomplete time slots
+    const validSlots = formData.timeSlots.filter(
+      slot => slot.dayOfWeek !== undefined && slot.startTime && slot.endTime
+    );
+
+    if (validSlots.length === 0) {
+      setAvailableRooms([]);
+      return;
+    }
+
+    try {
+      setLoadingRooms(true);
+      
+      // Check availability for each time slot
+      const availabilityChecks = await Promise.all(
+        validSlots.map(slot =>
+          sectionService.getAvailableRooms({
+            dayOfWeek: slot.dayOfWeek,
+            startTime: slot.startTime,
+            endTime: slot.endTime,
+            semester: formData.semester,
+            academicYear: formData.academicYear,
+            excludeSectionId: editingSection?.id
+          })
+        )
+      );
+
+      // Find rooms that are available for ALL time slots
+      if (availabilityChecks.length === 0) {
+        setAvailableRooms([]);
+        return;
+      }
+
+      let commonRooms = new Set(availabilityChecks[0].availableRooms);
+      for (let i = 1; i < availabilityChecks.length; i++) {
+        const currentRooms = new Set(availabilityChecks[i].availableRooms);
+        commonRooms = new Set([...commonRooms].filter(room => currentRooms.has(room)));
+      }
+
+      setAvailableRooms(Array.from(commonRooms).sort());
+    } catch (error) {
+      console.error('Error fetching available rooms:', error);
+      setAvailableRooms([]);
+    } finally {
+      setLoadingRooms(false);
+    }
+  };
+
+  // Fetch available rooms when time slots, semester, or academic year change
+  useEffect(() => {
+    if (openDialog) {
+      fetchAvailableRooms();
+    }
+  }, [formData.timeSlots, formData.semester, formData.academicYear, openDialog]);
 
   const OverviewTab = () => (
     <Grid container spacing={3}>
@@ -885,12 +952,31 @@ const Sections: React.FC = () => {
               />
             </Grid>
             <Grid item xs={12} sm={4}>
-              <TextField
-                fullWidth
-                label="Room"
+              <Autocomplete
+                freeSolo
+                options={availableRooms}
                 value={formData.room}
-                onChange={(e) => setFormData({ ...formData, room: e.target.value })}
-                placeholder="e.g., IT204"
+                onInputChange={(_, newValue) => {
+                  setFormData({ ...formData, room: newValue });
+                }}
+                onChange={(_, newValue) => {
+                  setFormData({ ...formData, room: newValue || '' });
+                }}
+                loading={loadingRooms}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="Room"
+                    placeholder="e.g., IT204"
+                    helperText={
+                      formData.timeSlots.length > 0 && availableRooms.length > 0
+                        ? `${availableRooms.length} available room(s) for selected time`
+                        : formData.timeSlots.length === 0
+                        ? 'Add a time slot to see available rooms'
+                        : 'No available rooms for selected time'
+                    }
+                  />
+                )}
               />
             </Grid>
 

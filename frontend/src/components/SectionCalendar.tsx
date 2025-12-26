@@ -35,10 +35,12 @@ import { DndProvider, useDrag, useDrop } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import { sectionService } from '../services/sectionService';
 import { facultyService } from '../services/facultyService';
+import { assignmentValidation } from '../services/assignmentValidation';
 
 // Drag and drop item types
 const ItemTypes = {
-  SECTION: 'section'
+  SECTION: 'section',
+  FACULTY: 'faculty'
 };
 
 interface Section {
@@ -380,13 +382,80 @@ const SectionCalendar: React.FC<SectionCalendarProps> = ({
       if (onSectionUpdate) {
         await onSectionUpdate();
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating section time:', error);
-      setError('Failed to update section schedule');
+      const msg = error.response?.data?.message || error.response?.data?.error || 'Failed to update section schedule';
+      setError(msg);
     } finally {
       setLoading(false);
     }
   }, [sections, onSectionUpdate]);
+
+  // Faculty drop handler
+  const handleFacultyDrop = useCallback(async (faculty: any, targetDay: number, targetHour: number) => {
+    // Find the section at the target time slot
+    const targetSection = filteredSections.find(section => {
+      return section.timeSlots?.some(slot => 
+        slot.dayOfWeek === targetDay && 
+        getSectionStartHour(section, targetDay) === targetHour
+      );
+    });
+
+    if (!targetSection) {
+      setError('No section found at this time slot');
+      return;
+    }
+
+    if (targetSection.faculty) {
+      setError('This section already has a faculty assigned');
+      return;
+    }
+
+    console.log('Validating and assigning faculty', faculty.fullName, 'to section', targetSection.sectionCode);
+
+    try {
+      setLoading(true);
+      setError('');
+      
+      // Validate the assignment before proceeding
+      const validationResult = await assignmentValidation.validateFacultyAssignment(faculty.id, targetSection);
+      
+      if (!validationResult.isValid) {
+        setError(`Assignment blocked: ${validationResult.errors.join(', ')}`);
+        return;
+      }
+      
+      // Show warnings if any
+      if (validationResult.warnings.length > 0) {
+        console.warn('Assignment warnings:', validationResult.warnings);
+        // You could show a confirmation dialog here for warnings
+      }
+      
+      await sectionService.assignFacultyToSection(
+        targetSection.id,
+        faculty.id,
+        targetSection.room
+      );
+      
+      // Refresh the sections data
+      if (onSectionUpdate) {
+        await onSectionUpdate();
+      }
+      
+      console.log('Faculty assignment successful');
+      
+      // Show success message with any warnings
+      if (validationResult.warnings.length > 0) {
+        setError(`Assignment successful with warnings: ${validationResult.warnings.join(', ')}`);
+      }
+      
+    } catch (error: any) {
+      console.error('Error assigning faculty via drag and drop:', error);
+      setError(error.response?.data?.error || 'Failed to assign faculty');
+    } finally {
+      setLoading(false);
+    }
+  }, [filteredSections, onSectionUpdate]);
 
   // Time editing handlers
   const handleEditTime = (section: Section) => {
@@ -421,9 +490,10 @@ const SectionCalendar: React.FC<SectionCalendarProps> = ({
       if (onSectionUpdate) {
         await onSectionUpdate();
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating section time:', error);
-      setError('Failed to update section schedule');
+      const msg = error.response?.data?.message || error.response?.data?.error || 'Failed to update section schedule';
+      setError(msg);
     } finally {
       setLoading(false);
     }
@@ -539,18 +609,41 @@ const SectionCalendar: React.FC<SectionCalendarProps> = ({
     hour: number;
     children?: React.ReactNode;
   }> = ({ day, hour, children }) => {
-    const [{ isOver, canDrop }, drop] = useDrop(() => ({
-      accept: ItemTypes.SECTION,
-      drop: (item: { id: string; section: Section }) => {
-        handleSectionDrop(item.id, day, hour);
+    const [{ isOver, canDrop, draggedItem }, drop] = useDrop(() => ({
+      accept: [ItemTypes.SECTION, ItemTypes.FACULTY],
+      drop: (item: any) => {
+        if (item.faculty) {
+          // Faculty dropped - assign to available section at this time slot
+          handleFacultyDrop(item.faculty, day, hour);
+        } else if (item.section) {
+          // Section dropped - move section to new time
+          handleSectionDrop(item.id, day, hour);
+        }
       },
       collect: (monitor) => ({
         isOver: monitor.isOver(),
         canDrop: monitor.canDrop(),
+        draggedItem: monitor.getItem(),
       }),
-    }), [day, hour, handleSectionDrop]);
+    }), [day, hour, handleSectionDrop, handleFacultyDrop]);
 
-    const isHighlighted = isOver && canDrop;
+    const getSectionAtTimeSlot = () => {
+      return filteredSections.find(section => {
+        return section.timeSlots?.some(slot => 
+          slot.dayOfWeek === day && 
+          getSectionStartHour(section, day) === hour
+        );
+      });
+    };
+
+    const existingSection = getSectionAtTimeSlot();
+    
+    // Determine drop validity
+    const canDropFaculty = draggedItem?.faculty && existingSection && !existingSection.faculty;
+    const canDropSection = draggedItem?.section && !existingSection;
+    const actualCanDrop = canDropFaculty || canDropSection;
+    
+    const isHighlighted = isOver && actualCanDrop;
 
     return (
       <div ref={drop}>
@@ -572,21 +665,25 @@ const SectionCalendar: React.FC<SectionCalendarProps> = ({
             },
             transition: 'background-color 0.2s ease-in-out',
             position: 'relative',
-            border: isHighlighted ? `2px dashed ${theme.palette.primary.main}` : 'none',
+            border: isHighlighted 
+              ? `2px dashed ${theme.palette.primary.main}` 
+              : (isOver && !actualCanDrop) 
+                ? `2px dashed ${theme.palette.error.main}`
+                : 'none',
           }}
           onMouseEnter={() => setHoveredTimeSlot({ day, hour })}
           onMouseLeave={() => setHoveredTimeSlot(null)}
         >
           {children}
-          {isHighlighted && (
+          {isOver && (
             <Box
               sx={{
                 position: 'absolute',
                 top: '50%',
                 left: '50%',
                 transform: 'translate(-50%, -50%)',
-                backgroundColor: theme.palette.primary.main,
-                color: theme.palette.primary.contrastText,
+                backgroundColor: actualCanDrop ? theme.palette.primary.main : theme.palette.error.main,
+                color: actualCanDrop ? theme.palette.primary.contrastText : theme.palette.error.contrastText,
                 borderRadius: 1,
                 px: 1,
                 py: 0.5,
@@ -594,9 +691,36 @@ const SectionCalendar: React.FC<SectionCalendarProps> = ({
                 fontWeight: 'bold',
                 pointerEvents: 'none',
                 zIndex: 5,
+                textAlign: 'center',
+                minWidth: 60,
               }}
             >
-              Drop here
+              {draggedItem?.faculty ? (
+                actualCanDrop ? `Assign Faculty` : 'Already Assigned'
+              ) : (
+                actualCanDrop ? 'Drop here' : 'Cannot drop'
+              )}
+            </Box>
+          )}
+          
+          {/* Visual indicator for unassigned sections */}
+          {existingSection && !existingSection.faculty && (
+            <Box
+              sx={{
+                position: 'absolute',
+                top: 2,
+                right: 2,
+                width: 16,
+                height: 16,
+                borderRadius: '50%',
+                backgroundColor: theme.palette.warning.main,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 3
+              }}
+            >
+              <PersonIcon sx={{ fontSize: 10, color: 'white' }} />
             </Box>
           )}
         </Box>
@@ -834,23 +958,36 @@ const SectionCalendar: React.FC<SectionCalendarProps> = ({
                 />
               ))}
               
-              {/* Draggable sections positioned absolutely */}
-              {getSectionsForDay(day.day).map((section) => {
-                const colors = getSectionColor(section);
-                const width = getSectionWidth(section, day.day);
-                const left = getSectionLeft(section, day.day);
-                const timeSlot = section.timeSlots?.find(slot => slot.dayOfWeek === day.day);
+              {/* Draggable sections positioned absolutely - show all time slots for each section */}
+              {getSectionsForDay(day.day).flatMap((section) => {
+                // Get all time slots for this section on this day
+                const sectionTimeSlots = section.timeSlots?.filter(slot => slot.dayOfWeek === day.day) || [];
+                
+                // Create a visual block for each time slot
+                return sectionTimeSlots.map((timeSlot, slotIndex) => {
+                  const startMinutes = timeToMinutes(timeSlot.startTime);
+                  const endMinutes = timeToMinutes(timeSlot.endTime);
+                  const startHour = Math.floor(startMinutes / 60);
+                  const duration = endMinutes - startMinutes;
+                  const hours = Math.ceil(duration / 60);
+                  
+                  const hourIndex = timeSlots.findIndex(slot => slot.hour === startHour);
+                  const left = hourIndex * 80;
+                  const width = hours * 80;
+                  
+                  const colors = getSectionColor(section);
 
-                return (
-                  <DraggableSection
-                    key={section.id}
-                    section={section}
-                    colors={colors}
-                    width={width}
-                    left={left}
-                    timeSlot={timeSlot}
-                  />
-                );
+                  return (
+                    <DraggableSection
+                      key={`${section.id}-${day.day}-${slotIndex}`}
+                      section={section}
+                      colors={colors}
+                      width={width}
+                      left={left}
+                      timeSlot={timeSlot}
+                    />
+                  );
+                });
               })}
             </Box>
           </Box>

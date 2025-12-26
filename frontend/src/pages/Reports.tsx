@@ -27,6 +27,10 @@ import {
   ListItemText,
   ListItemIcon,
   Divider,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
 } from '@mui/material';
 import {
   GetApp as DownloadIcon,
@@ -43,8 +47,9 @@ import {
   getLoadDistributionReport,
   getComplianceReport,
   exportMonitoringSheet,
-  getSections,
+  getFaculty,
 } from '../services/api';
+import { sectionService } from '../services/sectionService';
 import * as XLSX from 'xlsx';
 
 interface LoadDistribution {
@@ -92,11 +97,33 @@ interface SectionReportData {
   faculty: string;
 }
 
+interface FacultyLoadingSummary {
+  facultyId: string;
+  name: string;
+  type: string;
+  department: string;
+  totalHours: number;
+  sectionCount: number;
+}
+
 const Reports: React.FC = () => {
   const [selectedTab, setSelectedTab] = useState(0);
   const [loadDistribution, setLoadDistribution] = useState<LoadDistribution[]>([]);
   const [complianceReport, setComplianceReport] = useState<ComplianceReport | null>(null);
   const [sectionReportData, setSectionReportData] = useState<SectionReportData[]>([]);
+  const [sectionFilters, setSectionFilters] = useState({
+    semester: 'Second',
+    academicYear: '2025-2026',
+    sectionCode: '',
+  });
+  const [availableSectionCodes, setAvailableSectionCodes] = useState<string[]>([]);
+  const [facultyLoadingSummary, setFacultyLoadingSummary] = useState<FacultyLoadingSummary[]>([]);
+  const [facultyLoadingFilters, setFacultyLoadingFilters] = useState({
+    semester: 'Second',
+    academicYear: '2025-2026',
+    facultyId: 'all',
+  });
+  const [facultyOptions, setFacultyOptions] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
@@ -109,8 +136,22 @@ const Reports: React.FC = () => {
       fetchComplianceReport();
     } else if (selectedTab === 2) {
       fetchSectionReport();
+    } else if (selectedTab === 3) {
+      fetchFacultyLoadingSummary();
     }
   }, [selectedTab]);
+
+  useEffect(() => {
+    if (selectedTab === 2) {
+      fetchSectionReport();
+    }
+  }, [sectionFilters]);
+
+  useEffect(() => {
+    if (selectedTab === 3) {
+      fetchFacultyLoadingSummary();
+    }
+  }, [facultyLoadingFilters]);
 
   const fetchLoadDistribution = async () => {
     try {
@@ -141,33 +182,119 @@ const Reports: React.FC = () => {
   const fetchSectionReport = async () => {
     try {
       setLoading(true);
-      const sections = await getSections();
-      
-      // Transform section data to match the required columns
-      const reportData: SectionReportData[] = sections.map((section: any) => {
-        const timeSlots = section.timeSlots || [];
-        const primaryTimeSlot = timeSlots[0] || {};
-        
-        return {
-          subjectCode: section.course?.code || '',
-          description: section.course?.name || '',
-          lecHours: section.lectureHours || 0,
-          labHours: section.laboratoryHours || 0,
-          totalHours: (section.lectureHours || 0) + (section.laboratoryHours || 0),
-          units: section.course?.credits || 0,
-          section: section.sectionCode || '',
-          roomNo: section.room || 'TBA',
-          day: primaryTimeSlot.dayOfWeek ? getDayName(primaryTimeSlot.dayOfWeek) : '',
-          startTime: primaryTimeSlot.startTime || '',
-          endTime: primaryTimeSlot.endTime || '',
-          faculty: section.faculty ? `${section.faculty.firstName} ${section.faculty.lastName}` : 'Unassigned'
-        };
+      const sections = await sectionService.getAllSections({
+        semester: sectionFilters.semester,
+        academicYear: sectionFilters.academicYear,
+        sectionCode: sectionFilters.sectionCode || undefined,
       });
       
-      setSectionReportData(reportData);
+      // Flatten sections with multiple time slots into separate rows
+      const reportRows: SectionReportData[] = [];
+
+      sections.forEach((section: any) => {
+        const timeSlots = section.timeSlots && section.timeSlots.length > 0
+          ? section.timeSlots
+          : [{ dayOfWeek: undefined, startTime: '', endTime: '' }];
+
+        timeSlots.forEach((slot: any) => {
+          reportRows.push({
+            subjectCode: section.course?.code || '',
+            description: section.course?.name || '',
+            lecHours: section.lectureHours || 0,
+            labHours: section.laboratoryHours || 0,
+            totalHours: (section.lectureHours || 0) + (section.laboratoryHours || 0),
+            units: section.course?.credits || 0,
+            section: section.sectionCode || '',
+            roomNo: section.room || 'TBA',
+            day: slot.dayOfWeek !== undefined ? getDayName(slot.dayOfWeek) : '',
+            startTime: slot.startTime || '',
+            endTime: slot.endTime || '',
+            faculty: section.faculty ? `${section.faculty.firstName} ${section.faculty.lastName}` : 'Unassigned'
+          });
+        });
+      });
+      
+      setSectionReportData(reportRows);
+
+      // Update available section codes for the filter dropdown
+      const codes = Array.from(new Set(sections.map((s: any) => s.sectionCode))).sort();
+      setAvailableSectionCodes(codes);
       setError('');
     } catch (err: any) {
       setError(err.response?.data?.error || 'Failed to fetch section report');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Helper to compute total hours for a section based on its schedule
+  const computeSectionHours = (section: any): number => {
+    if (section.timeSlots && Array.isArray(section.timeSlots) && section.timeSlots.length > 0) {
+      const totalMinutes = section.timeSlots.reduce((sum: number, slot: any) => {
+        if (!slot.startTime || !slot.endTime) return sum;
+        const [sh, sm] = slot.startTime.split(':').map(Number);
+        const [eh, em] = slot.endTime.split(':').map(Number);
+        const minutes = (eh * 60 + em) - (sh * 60 + sm);
+        return sum + (minutes > 0 ? minutes : 0);
+      }, 0);
+      return totalMinutes / 60;
+    }
+
+    return Number(section.lectureHours || 0) + Number(section.laboratoryHours || 0);
+  };
+
+  const fetchFacultyLoadingSummary = async () => {
+    try {
+      setLoading(true);
+      const [sections, faculty] = await Promise.all([
+        sectionService.getAllSections({
+          semester: facultyLoadingFilters.semester,
+          academicYear: facultyLoadingFilters.academicYear,
+        }),
+        getFaculty(),
+      ]);
+
+      setFacultyOptions(faculty);
+
+      const summaryMap = new Map<string, FacultyLoadingSummary>();
+
+      sections.forEach((section: any) => {
+        if (!section.faculty) return;
+        if (facultyLoadingFilters.facultyId !== 'all' && section.faculty.id !== facultyLoadingFilters.facultyId) {
+          return;
+        }
+
+        const baseHours = computeSectionHours(section);
+        const facultyMeta = faculty.find((f: any) => f.id === section.faculty.id);
+        const name =
+          facultyMeta?.fullName ||
+          (facultyMeta ? `${facultyMeta.firstName} ${facultyMeta.lastName}`.trim() : section.faculty.fullName);
+
+        const key = section.faculty.id;
+        const existing = summaryMap.get(key);
+
+        if (existing) {
+          existing.totalHours += baseHours;
+          existing.sectionCount += 1;
+        } else {
+          summaryMap.set(key, {
+            facultyId: key,
+            name,
+            type: facultyMeta?.type || 'Regular',
+            department: facultyMeta?.department || '',
+            totalHours: baseHours,
+            sectionCount: 1,
+          });
+        }
+      });
+
+      const summaryArray = Array.from(summaryMap.values()).sort((a, b) =>
+        a.name.localeCompare(b.name),
+      );
+      setFacultyLoadingSummary(summaryArray);
+      setError('');
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Failed to fetch faculty loading summary');
     } finally {
       setLoading(false);
     }
@@ -247,12 +374,55 @@ const Reports: React.FC = () => {
     }
   };
 
+  const handleExportFacultyLoadingSummary = () => {
+    try {
+      const wb = XLSX.utils.book_new();
+
+      const ws_data = [
+        ['Faculty Name', 'Type', 'Department', 'Total Hours', 'No. of Sections'],
+        ...facultyLoadingSummary.map((row) => [
+          row.name ?? '',
+          row.type ?? '',
+          row.department ?? '',
+          row.totalHours ?? 0,
+          row.sectionCount ?? 0,
+        ]),
+      ];
+
+      const ws = XLSX.utils.aoa_to_sheet(ws_data);
+
+      // Attach worksheet to workbook (required so workbook is not empty)
+      XLSX.utils.book_append_sheet(wb, ws, 'Faculty Loading Summary');
+
+      ws['!cols'] = [
+        { wch: 30 }, // Faculty Name
+        { wch: 12 }, // Type
+        { wch: 20 }, // Department
+        { wch: 12 }, // Total Hours
+        { wch: 16 }, // No. of Sections
+      ];
+
+      const today = new Date();
+      const filename = `Faculty_Loading_Summary_${today.getFullYear()}-${(today.getMonth() + 1)
+        .toString()
+        .padStart(2, '0')}-${today.getDate().toString().padStart(2, '0')}.xlsx`;
+
+      XLSX.writeFile(wb, filename);
+    } catch (err: any) {
+      console.error('Failed to export faculty loading summary:', err);
+      const message =
+        err?.message || (typeof err === 'string' ? err : 'Failed to export faculty loading summary');
+      setError(message);
+    }
+  };
+
   const getTypeColor = (type: string) => {
     const colors = {
       Regular: 'primary',
       PartTime: 'secondary',
       Temporary: 'warning',
       Designee: 'info',
+      AdminFaculty: 'warning',
     };
     return colors[type as keyof typeof colors] || 'default';
   };
@@ -271,6 +441,7 @@ const Reports: React.FC = () => {
       PartTime: 12, // 12 regular + 0 extra
       Temporary: 30, // 21 regular + 9 extra
       Designee: 15, // 9 regular + 6 extra
+      AdminFaculty: 15, // 0 regular + 15 extra (part-time hours)
     };
     return limits[type as keyof typeof limits] || 0;
   };
@@ -294,6 +465,35 @@ const Reports: React.FC = () => {
         >
           Export to Excel
         </Button>
+      </Box>
+
+      {/* Filters */}
+      <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mb: 3 }}>
+        <FormControl size="small" sx={{ minWidth: 160 }}>
+          <InputLabel>Semester</InputLabel>
+          <Select
+            value={sectionFilters.semester}
+            label="Semester"
+            onChange={(e) => setSectionFilters({ ...sectionFilters, semester: e.target.value })}
+          >
+            <MenuItem value="First">First Semester</MenuItem>
+            <MenuItem value="Second">Second Semester</MenuItem>
+          </Select>
+        </FormControl>
+
+        <FormControl size="small" sx={{ minWidth: 180 }}>
+          <InputLabel>Section</InputLabel>
+          <Select
+            value={sectionFilters.sectionCode}
+            label="Section"
+            onChange={(e) => setSectionFilters({ ...sectionFilters, sectionCode: e.target.value })}
+          >
+            <MenuItem value="">All Sections</MenuItem>
+            {availableSectionCodes.map(code => (
+              <MenuItem key={code} value={code}>{code}</MenuItem>
+            ))}
+          </Select>
+        </FormControl>
       </Box>
 
       {/* Summary Cards */}
@@ -567,6 +767,121 @@ const Reports: React.FC = () => {
     </Box>
   );
 
+  const renderFacultyLoadingSummary = () => (
+    <Box>
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+        <Typography variant="h5">
+          Faculty Loading Summary
+        </Typography>
+        <Button
+          variant="outlined"
+          startIcon={<DownloadIcon />}
+          onClick={handleExportFacultyLoadingSummary}
+          disabled={facultyLoadingSummary.length === 0}
+        >
+          Export to Excel
+        </Button>
+      </Box>
+
+      {/* Filters */}
+      <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mb: 3 }}>
+        <FormControl size="small" sx={{ minWidth: 160 }}>
+          <InputLabel>Semester</InputLabel>
+          <Select
+            value={facultyLoadingFilters.semester}
+            label="Semester"
+            onChange={(e) =>
+              setFacultyLoadingFilters({ ...facultyLoadingFilters, semester: e.target.value })
+            }
+          >
+            <MenuItem value="First">First Semester</MenuItem>
+            <MenuItem value="Second">Second Semester</MenuItem>
+          </Select>
+        </FormControl>
+
+        <FormControl size="small" sx={{ minWidth: 200 }}>
+          <InputLabel>Faculty</InputLabel>
+          <Select
+            value={facultyLoadingFilters.facultyId}
+            label="Faculty"
+            onChange={(e) =>
+              setFacultyLoadingFilters({ ...facultyLoadingFilters, facultyId: e.target.value })
+            }
+          >
+            <MenuItem value="all">All Faculty</MenuItem>
+            {facultyOptions.map((f: any) => (
+              <MenuItem key={f.id} value={f.id}>
+                {f.fullName || `${f.firstName} ${f.lastName}`}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+      </Box>
+
+      {/* Summary Cards */}
+      <Grid container spacing={3} sx={{ mb: 3 }}>
+        <Grid item xs={12} sm={6} md={3}>
+          <Card>
+            <CardContent>
+              <Box display="flex" alignItems="center">
+                <PeopleIcon color="primary" sx={{ mr: 2 }} />
+                <Box>
+                  <Typography variant="h6">{facultyLoadingSummary.length}</Typography>
+                  <Typography variant="body2" color="textSecondary">
+                    Faculty with Load
+                  </Typography>
+                </Box>
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <Card>
+            <CardContent>
+              <Box display="flex" alignItems="center">
+                <ScheduleIcon color="success" sx={{ mr: 2 }} />
+                <Box>
+                  <Typography variant="h6">
+                    {facultyLoadingSummary.reduce((sum, f) => sum + f.totalHours, 0)}
+                  </Typography>
+                  <Typography variant="body2" color="textSecondary">
+                    Total Hours
+                  </Typography>
+                </Box>
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
+
+      {/* Summary Table */}
+      <TableContainer component={Paper}>
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableCell>Faculty Name</TableCell>
+              <TableCell>Type</TableCell>
+              <TableCell>Department</TableCell>
+              <TableCell align="center">Total Hours</TableCell>
+              <TableCell align="center">No. of Sections</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {facultyLoadingSummary.map((row) => (
+              <TableRow key={row.facultyId}>
+                <TableCell>{row.name}</TableCell>
+                <TableCell>{row.type}</TableCell>
+                <TableCell>{row.department}</TableCell>
+                <TableCell align="center">{row.totalHours}</TableCell>
+                <TableCell align="center">{row.sectionCount}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
+    </Box>
+  );
+
   const renderComplianceReport = () => (
     <Box>
       <Typography variant="h5" gutterBottom>
@@ -751,18 +1066,14 @@ const Reports: React.FC = () => {
           <Tab label="Load Distribution" />
           <Tab label="Compliance Report" />
           <Tab label="Section Report" />
-          <Tab label="Department Analysis" disabled />
+          <Tab label="Faculty Loading Summary" />
         </Tabs>
       </Box>
 
       {selectedTab === 0 && renderLoadDistributionReport()}
       {selectedTab === 1 && renderComplianceReport()}
       {selectedTab === 2 && renderSectionReport()}
-      {selectedTab === 3 && (
-        <Typography variant="body1" color="textSecondary">
-          Department Analysis report - Coming soon
-        </Typography>
-      )}
+      {selectedTab === 3 && renderFacultyLoadingSummary()}
 
       {/* Details Dialog */}
       <Dialog open={detailsDialogOpen} onClose={() => setDetailsDialogOpen(false)} maxWidth="md" fullWidth>

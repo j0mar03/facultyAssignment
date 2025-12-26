@@ -224,6 +224,22 @@ const FacultyScheduleTab: React.FC<FacultyScheduleTabProps> = ({
     }
   };
 
+  // Helper to compute total hours for a section based on its schedule
+  const computeSectionHours = (section: any): number => {
+    if (section.timeSlots && Array.isArray(section.timeSlots) && section.timeSlots.length > 0) {
+      const totalMinutes = section.timeSlots.reduce((sum: number, slot: any) => {
+        if (!slot.startTime || !slot.endTime) return sum;
+        const [sh, sm] = slot.startTime.split(':').map(Number);
+        const [eh, em] = slot.endTime.split(':').map(Number);
+        const minutes = (eh * 60 + em) - (sh * 60 + sm);
+        return sum + (minutes > 0 ? minutes : 0);
+      }, 0);
+      return totalMinutes / 60;
+    }
+
+    return Number(section.lectureHours || 0) + Number(section.laboratoryHours || 0);
+  };
+
   // Get faculty load summary for selected faculty
   const getSelectedFacultyLoad = () => {
     if (selectedFacultyId === 'all') return null;
@@ -236,20 +252,25 @@ const FacultyScheduleTab: React.FC<FacultyScheduleTabProps> = ({
         PartTime: { regular: 12, extra: 0 },
         Temporary: { regular: 21, extra: 9 },
         Designee: { regular: 9, extra: 6 },
+        AdminFaculty: { regular: 0, extra: 15 }, // All load is extra (part-time hours)
       };
       return limits[type as keyof typeof limits] || { regular: 0, extra: 0 };
     };
 
     const limit = getLoadLimitForType(selectedFaculty.type);
-    const totalLoad = selectedFaculty.currentRegularLoad + selectedFaculty.currentExtraLoad;
+    // Compute load based only on currently loaded sections (filtered by semester/AY)
+    const totalLoad = facultySections.reduce((sum, section) => {
+      if (!section.faculty || section.faculty.id !== selectedFacultyId) return sum;
+      return sum + computeSectionHours(section);
+    }, 0);
     const maxLoad = limit.regular + limit.extra;
 
     return {
       faculty: selectedFaculty,
       totalLoad,
       maxLoad,
-      regularLoad: selectedFaculty.currentRegularLoad,
-      extraLoad: selectedFaculty.currentExtraLoad,
+      regularLoad: totalLoad, // treat all as regular for this per-semester view
+      extraLoad: 0,
       limit
     };
   };
@@ -628,6 +649,8 @@ const Faculty: React.FC = () => {
   const [activeTab, setActiveTab] = useState(0);
   const [selectedFacultyId, setSelectedFacultyId] = useState<string>('all');
   const [facultySections, setFacultySections] = useState<any[]>([]);
+  const [selectedSemester, setSelectedSemester] = useState<string>('Second');
+  const [selectedAcademicYear, setSelectedAcademicYear] = useState<string>('2025-2026');
   
   const { control, handleSubmit, reset, formState: { errors } } = useForm<FacultyFormData>();
 
@@ -636,6 +659,7 @@ const Faculty: React.FC = () => {
     { value: 'PartTime', label: 'Part-Time Faculty' },
     { value: 'Temporary', label: 'Temporary Faculty' },
     { value: 'Designee', label: 'Designee' },
+    { value: 'AdminFaculty', label: 'Admin Faculty' },
   ];
 
   const departments = [
@@ -651,7 +675,7 @@ const Faculty: React.FC = () => {
     if (activeTab === 1) {
       loadFacultySections();
     }
-  }, [activeTab, selectedFacultyId]);
+  }, [activeTab, selectedFacultyId, selectedSemester, selectedAcademicYear]);
 
   const fetchFaculty = async () => {
     try {
@@ -669,8 +693,8 @@ const Faculty: React.FC = () => {
   const loadFacultySections = async () => {
     try {
       const filters: any = {
-        semester: 'First',
-        academicYear: '2025-2026'
+        semester: selectedSemester,
+        academicYear: selectedAcademicYear
       };
       
       if (selectedFacultyId !== 'all') {
@@ -781,6 +805,7 @@ const Faculty: React.FC = () => {
       PartTime: { regular: 12, extra: 0 },
       Temporary: { regular: 21, extra: 9 },
       Designee: { regular: 9, extra: 6 },
+      AdminFaculty: { regular: 0, extra: 15 }, // All load is extra (part-time hours)
     };
     return limits[type as keyof typeof limits] || { regular: 0, extra: 0 };
   };
@@ -789,6 +814,7 @@ const Faculty: React.FC = () => {
     const colors = {
       Regular: 'primary',
       PartTime: 'secondary',
+      AdminFaculty: 'info',
       Temporary: 'warning',
       Designee: 'info',
     };
@@ -1017,12 +1043,38 @@ const Faculty: React.FC = () => {
       )}
 
       {activeTab === 1 && (
-        <FacultyScheduleTab
-          faculty={faculty}
-          selectedFacultyId={selectedFacultyId}
-          setSelectedFacultyId={setSelectedFacultyId}
-          facultySections={facultySections}
-        />
+        <>
+          <Box sx={{ mb: 3, display: 'flex', gap: 2, alignItems: 'center' }}>
+            <FormControl sx={{ minWidth: 150 }}>
+              <InputLabel>Semester</InputLabel>
+              <Select
+                value={selectedSemester}
+                label="Semester"
+                onChange={(e) => setSelectedSemester(e.target.value)}
+              >
+                <MenuItem value="First">First Semester</MenuItem>
+                <MenuItem value="Second">Second Semester</MenuItem>
+              </Select>
+            </FormControl>
+            <FormControl sx={{ minWidth: 150 }}>
+              <InputLabel>Academic Year</InputLabel>
+              <Select
+                value={selectedAcademicYear}
+                label="Academic Year"
+                onChange={(e) => setSelectedAcademicYear(e.target.value)}
+              >
+                <MenuItem value="2024-2025">2024-2025</MenuItem>
+                <MenuItem value="2025-2026">2025-2026</MenuItem>
+              </Select>
+            </FormControl>
+          </Box>
+          <FacultyScheduleTab
+            faculty={faculty}
+            selectedFacultyId={selectedFacultyId}
+            setSelectedFacultyId={setSelectedFacultyId}
+            facultySections={facultySections}
+          />
+        </>
       )}
 
       {/* Add/Edit Faculty Dialog */}

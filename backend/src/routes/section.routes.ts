@@ -14,6 +14,9 @@ router.get('/', sectionController.getAllSections);
 // GET /api/sections/overview - Get sections overview for chairperson
 router.get('/overview', sectionController.getSectionsOverview);
 
+// GET /api/sections/available-rooms - Get available rooms for a given day and time
+router.get('/available-rooms', sectionController.getAvailableRooms);
+
 // GET /api/sections/:id - Get section by ID
 router.get('/:id', sectionController.getSectionById);
 

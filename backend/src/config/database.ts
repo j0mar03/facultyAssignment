@@ -5,6 +5,7 @@ import { Course } from '../entities/Course';
 import { Assignment } from '../entities/Assignment';
 import { ITEESRecord } from '../entities/ITEESRecord';
 import { Section } from '../entities/Section';
+import { Room } from '../entities/Room';
 import * as dotenv from 'dotenv';
 
 dotenv.config();
@@ -18,7 +19,7 @@ export const AppDataSource = new DataSource({
   database: process.env.DB_NAME || 'faculty_load_db',
   synchronize: process.env.NODE_ENV !== 'production',
   logging: process.env.NODE_ENV === 'development',
-  entities: [User, Faculty, Course, Assignment, ITEESRecord, Section],
+  entities: [User, Faculty, Course, Assignment, ITEESRecord, Section, Room],
   migrations: ['src/migrations/*.ts'],
   subscribers: ['src/subscribers/*.ts'],
 });

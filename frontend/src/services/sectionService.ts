@@ -142,6 +142,28 @@ class SectionService {
     const response = await api.get(`/sections/${sectionId}?hasConflicts=true`);
     return response.data;
   }
+
+  async getAvailableRooms(params: {
+    dayOfWeek: number;
+    startTime: string;
+    endTime: string;
+    semester: string;
+    academicYear: string;
+    excludeSectionId?: string;
+  }): Promise<{ availableRooms: string[]; totalRooms: number; availableCount: number }> {
+    const queryParams = new URLSearchParams();
+    queryParams.append('dayOfWeek', params.dayOfWeek.toString());
+    queryParams.append('startTime', params.startTime);
+    queryParams.append('endTime', params.endTime);
+    queryParams.append('semester', params.semester);
+    queryParams.append('academicYear', params.academicYear);
+    if (params.excludeSectionId) {
+      queryParams.append('excludeSectionId', params.excludeSectionId);
+    }
+    
+    const response = await api.get(`/sections/available-rooms?${queryParams.toString()}`);
+    return response.data;
+  }
 }
 
 export const sectionService = new SectionService();

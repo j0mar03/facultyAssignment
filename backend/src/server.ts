@@ -10,6 +10,7 @@ import scheduleRoutes from './routes/schedule.routes';
 import reportRoutes from './routes/report.routes';
 import authRoutes from './routes/auth.routes';
 import sectionRoutes from './routes/section.routes';
+import roomRoutes from './routes/room.routes';
 import { errorHandler } from './middleware/errorHandler';
 import { authMiddleware } from './middleware/auth';
 
@@ -31,6 +32,7 @@ app.use('/api/assignments', authMiddleware, assignmentRoutes);
 app.use('/api/schedule', authMiddleware, scheduleRoutes);
 app.use('/api/reports', authMiddleware, reportRoutes);
 app.use('/api/sections', authMiddleware, sectionRoutes);
+app.use('/api/rooms', authMiddleware, roomRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

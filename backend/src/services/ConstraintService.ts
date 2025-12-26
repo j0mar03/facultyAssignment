@@ -10,6 +10,7 @@ export class ConstraintService {
     PartTime: { regular: 12, extra: 0 },
     Temporary: { regular: 21, extra: 9 },
     Designee: { regular: 9, extra: 6 },
+    AdminFaculty: { regular: 0, extra: 15 }, // All load is extra (part-time hours)
   };
 
   private static readonly ITEES_LOAD_MATRIX = {
@@ -31,6 +32,11 @@ export class ConstraintService {
     let actualLoadType = loadType;
     if (faculty.type === 'Designee') {
       actualLoadType = this.determineDesigneeLoadType(timeSlot);
+    }
+    
+    // Admin Faculty: All load is considered extra (part-time hours)
+    if (faculty.type === 'AdminFaculty') {
+      actualLoadType = 'Extra';
     }
 
     // Check ITEES restrictions
@@ -105,8 +111,12 @@ export class ConstraintService {
     // Calculate load based on unique assignments only
     return Array.from(uniqueAssignments.values()).reduce(
       (acc, assignment) => {
+        // Admin Faculty: All load is extra (part-time hours)
+        if (faculty.type === 'AdminFaculty') {
+          acc.extra += assignment.contactHours;
+        }
         // For designees, determine load type based on time slot
-        if (faculty.type === 'Designee') {
+        else if (faculty.type === 'Designee') {
           const loadType = this.determineDesigneeLoadType(assignment.timeSlot);
           if (loadType === 'Regular') {
             acc.regular += assignment.contactHours;
@@ -170,7 +180,55 @@ export class ConstraintService {
     const startHour = this.timeToDecimalHours(timeSlot.startTime);
     const endHour = this.timeToDecimalHours(timeSlot.endTime);
 
-    // Weekend classes allowed 7:30 AM - 9:00 PM
+    // Admin Faculty special rules
+    if (faculty.type === 'AdminFaculty') {
+      // Saturday: 7:30 AM - 9:00 PM allowed
+      if (timeSlot.dayOfWeek === 6) {
+        if (startHour < 7.5 || endHour > 21) {
+          return {
+            valid: false,
+            reason: 'Admin Faculty Saturday classes must be between 7:30 AM and 9:00 PM.',
+          };
+        }
+        return { valid: true };
+      }
+
+      // Sunday: Not allowed (admin rest day)
+      if (timeSlot.dayOfWeek === 0) {
+        return {
+          valid: false,
+          reason: 'Admin Faculty cannot be scheduled on Sundays.',
+        };
+      }
+
+      // Weekdays (Monday-Friday): Only 6:00 PM - 9:00 PM allowed
+      // Block 8:00 AM - 5:00 PM (admin hours)
+      if (timeSlot.dayOfWeek >= 1 && timeSlot.dayOfWeek <= 5) {
+        // Check if overlaps with blocked admin hours (8am-5pm)
+        const adminStartHour = 8.0;
+        const adminEndHour = 17.0;
+        
+        // Check if time slot overlaps with admin hours
+        if ((startHour < adminEndHour && endHour > adminStartHour)) {
+          return {
+            valid: false,
+            reason: 'Admin Faculty cannot be scheduled during admin hours (8:00 AM - 5:00 PM) on weekdays.',
+          };
+        }
+
+        // Only allow 6:00 PM - 9:00 PM on weekdays
+        if (startHour < 18.0 || endHour > 21.0) {
+          return {
+            valid: false,
+            reason: 'Admin Faculty weekday classes must be between 6:00 PM and 9:00 PM.',
+          };
+        }
+
+        return { valid: true };
+      }
+    }
+
+    // Weekend classes allowed 7:30 AM - 9:00 PM (for non-admin faculty)
     if (timeSlot.dayOfWeek === 0 || timeSlot.dayOfWeek === 6) {
       if (startHour < 7.5 || endHour > 21) {
         return {

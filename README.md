@@ -39,23 +39,106 @@ npm run install:all
 
 3. Set up environment variables
 ```bash
+# Create .env file in root directory
 cp .env.example .env
-# Edit .env with your database credentials
+
+# Edit .env with your database credentials:
+# DB_HOST=localhost
+# DB_PORT=5432
+# DB_USER=postgres
+# DB_PASSWORD=your_password
+# DB_NAME=faculty_load_db
+# PORT=5000
+# JWT_SECRET=your-secret-key-change-this-in-production
+# NODE_ENV=development
+# VITE_API_URL=http://localhost:5000/api
 ```
 
 4. Set up the database
+
+**Option A: Using Docker (Recommended)**
 ```bash
+# Start PostgreSQL database container
+docker-compose up -d
+
+# The database will be automatically initialized with schema.sql
+```
+
+**Option B: Manual PostgreSQL Setup**
+```bash
+# Create database
 createdb faculty_load_db
+
+# Or using psql:
+psql -U postgres
+CREATE DATABASE faculty_load_db;
+\q
+
+# Run schema
+psql -U postgres -d faculty_load_db -f database/schema.sql
 ```
 
 5. Run the application
 ```bash
-# Development mode
+# Development mode (runs both backend and frontend)
 npm run dev
+
+# Or run separately:
+npm run dev:backend   # Backend on http://localhost:5000
+npm run dev:frontend  # Frontend on http://localhost:3000
 
 # Production build
 npm run build
 npm start
+```
+
+## Database Setup
+
+The project uses PostgreSQL. The database schema is located in `database/schema.sql`.
+
+### Using Docker Compose
+
+The easiest way to set up the database is using Docker:
+
+```bash
+docker-compose up -d
+```
+
+This will:
+- Start a PostgreSQL 15 container
+- Create the database `faculty_load_db`
+- Automatically initialize it with the schema from `database/schema.sql`
+- Persist data in a Docker volume
+
+### Database Schema
+
+The schema includes the following tables:
+- `faculty` - Faculty member information
+- `courses` - Course catalog
+- `assignments` - Faculty-course assignments
+- `itees_records` - ITEES performance ratings
+- `users` - System users for authentication
+- `sections` - Course sections
+- `rooms` - Classroom information
+
+### Database Backup and Restore
+
+**Backup:**
+```bash
+# Using pg_dump
+pg_dump -U postgres -d faculty_load_db > backup.sql
+
+# Or using Docker
+docker exec faculty_load_postgres pg_dump -U postgres faculty_load_db > backup.sql
+```
+
+**Restore:**
+```bash
+# Restore from backup
+psql -U postgres -d faculty_load_db < backup.sql
+
+# Or using Docker
+docker exec -i faculty_load_postgres psql -U postgres faculty_load_db < backup.sql
 ```
 
 ## Project Structure
@@ -134,6 +217,15 @@ faculty-load-management/
 - `GET /api/reports/load-distribution` - Load distribution report
 - `GET /api/reports/compliance` - Compliance report
 - `GET /api/reports/export/monitoring-sheet` - Export monitoring sheet
+
+## Getting Started with GitHub
+
+For detailed instructions on uploading this project to GitHub and setting up the database, see [GITHUB_SETUP.md](./GITHUB_SETUP.md).
+
+Quick steps:
+1. Create a new repository on GitHub
+2. Add remote: `git remote add origin https://github.com/YOUR_USERNAME/faculty-load-management.git`
+3. Commit and push: `git add . && git commit -m "Initial commit" && git push -u origin main`
 
 ## License
 

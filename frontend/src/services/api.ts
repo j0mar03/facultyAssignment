@@ -23,6 +23,20 @@ api.interceptors.request.use(
   }
 );
 
+// Handle 401 errors (invalid/expired tokens)
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      // Clear invalid token
+      localStorage.removeItem('token');
+      // Dispatch a custom event that the App component can listen to
+      window.dispatchEvent(new CustomEvent('auth:logout'));
+    }
+    return Promise.reject(error);
+  }
+);
+
 // Auth API
 export const login = async (email: string, password: string) => {
   const response = await api.post('/auth/login', { email, password });
@@ -111,6 +125,11 @@ export const getScheduleCalendar = async () => {
 export const getFacultyCalendar = async (facultyId?: string) => {
   const url = facultyId ? `/schedule/faculty/${facultyId}/calendar` : '/schedule/calendar';
   const response = await api.get(url);
+  return response.data;
+};
+
+export const checkScheduleConflicts = async () => {
+  const response = await api.get('/schedule/conflicts');
   return response.data;
 };
 

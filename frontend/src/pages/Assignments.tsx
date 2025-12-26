@@ -410,6 +410,7 @@ const Assignments: React.FC = () => {
       PartTime: { regular: 12, extra: 0 },
       Temporary: { regular: 21, extra: 9 },
       Designee: { regular: 9, extra: 6 },
+      AdminFaculty: { regular: 0, extra: 15 }, // All load is extra (part-time hours)
     };
     return limits[type as keyof typeof limits] || { regular: 0, extra: 0 };
   };

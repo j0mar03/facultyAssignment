@@ -4,6 +4,7 @@ import { Section } from '../entities/Section';
 import { Course } from '../entities/Course';
 import { Faculty } from '../entities/Faculty';
 import { Assignment } from '../entities/Assignment';
+import { Room } from '../entities/Room';
 import { ConstraintService } from '../services/ConstraintService';
 
 export class SectionController {
@@ -11,6 +12,7 @@ export class SectionController {
   private courseRepo = AppDataSource.getRepository(Course);
   private facultyRepo = AppDataSource.getRepository(Faculty);
   private assignmentRepo = AppDataSource.getRepository(Assignment);
+  private roomRepo = AppDataSource.getRepository(Room);
 
   // Get all sections with filters
   getAllSections = async (req: Request, res: Response) => {
@@ -120,34 +122,20 @@ export class SectionController {
         return res.status(400).json({ error: 'Course not found' });
       }
 
+      // Convert empty string to null/undefined for optional fields
+      const normalizedFacultyId = facultyId === '' ? null : facultyId;
+
       // Validate faculty exists if provided
-      if (facultyId) {
-        const faculty = await this.facultyRepo.findOne({ where: { id: facultyId } });
+      if (normalizedFacultyId) {
+        const faculty = await this.facultyRepo.findOne({ where: { id: normalizedFacultyId } });
         if (!faculty) {
           return res.status(400).json({ error: 'Faculty not found' });
         }
       }
 
-      // Check for duplicate section code within the same course and semester
-      const existingSection = await this.sectionRepo.findOne({
-        where: {
-          sectionCode,
-          courseId,
-          semester,
-          academicYear,
-          isActive: true
-        }
-      });
-
-      if (existingSection) {
-        return res.status(400).json({ 
-          error: 'Section code already exists for this course and semester' 
-        });
-      }
-
       // Check for scheduling conflicts if timeSlots and faculty are provided
-      if (facultyId && timeSlots && timeSlots.length > 0) {
-        const conflicts = await this.checkScheduleConflicts(facultyId, timeSlots, semester, academicYear);
+      if (normalizedFacultyId && timeSlots && timeSlots.length > 0) {
+        const conflicts = await this.checkScheduleConflicts(normalizedFacultyId, timeSlots, semester, academicYear);
         if (conflicts.length > 0) {
           return res.status(400).json({ 
             error: 'Schedule conflicts detected',
@@ -156,10 +144,30 @@ export class SectionController {
         }
       }
 
+      // Check student schedule conflicts within the same section code
+      if (timeSlots && timeSlots.length > 0) {
+        const sectionCodeConflicts = await this.checkSectionCodeConflicts(
+          sectionCode,
+          timeSlots,
+          semester,
+          academicYear
+        );
+        if (sectionCodeConflicts.length > 0) {
+          const details = sectionCodeConflicts
+            .map(c => `Day ${c.dayOfWeek} ${c.conflictingTime} with ${c.conflictingCourse || 'Unknown course'}`)
+            .join('; ');
+          return res.status(400).json({
+            error: 'Section schedule conflicts detected',
+            message: `Section ${sectionCode} has overlapping schedules: ${details}. Please adjust time slots.`,
+            conflicts: sectionCodeConflicts
+          });
+        }
+      }
+
       const section = this.sectionRepo.create({
         sectionCode,
         courseId,
-        facultyId,
+        facultyId: normalizedFacultyId,
         status: status || 'Planning',
         classType: classType || 'Regular',
         semester,
@@ -203,33 +211,270 @@ export class SectionController {
 
       console.log('Found section:', section);
 
-      // Validate faculty if being updated
-      if (updateData.facultyId) {
-        console.log('Validating faculty:', updateData.facultyId);
-        const faculty = await this.facultyRepo.findOne({ where: { id: updateData.facultyId } });
+      // Get course info for load calculation
+      const course = await this.courseRepo.findOne({ where: { id: section.courseId } });
+      if (!course) {
+        return res.status(400).json({ error: 'Course not found' });
+      }
+
+      // Convert empty string to null/undefined for optional fields
+      if (updateData.facultyId === '') {
+        updateData.facultyId = null;
+      }
+
+      const oldFacultyId = section.facultyId;
+      const newFacultyId = updateData.facultyId || null;
+      const isFacultyChanging = oldFacultyId !== newFacultyId;
+      const updatedTimeSlots = updateData.timeSlots || section.timeSlots;
+      const updatedRoom = updateData.room || section.room;
+
+      // Handle faculty load updates if faculty is being changed
+      if (isFacultyChanging) {
+        // If unassigning from old faculty, subtract load
+        if (oldFacultyId) {
+          const oldFaculty = await this.facultyRepo.findOne({ where: { id: oldFacultyId } });
+          if (oldFaculty) {
+            const contactHours = parseInt(String(course.contactHours || 0));
+            
+            // Find and remove the assignment
+            const oldAssignment = await this.assignmentRepo.findOne({
+              where: {
+                facultyId: oldFacultyId,
+                sectionId: id
+              }
+            });
+
+            if (oldAssignment) {
+              // Subtract load based on assignment type
+              if (oldAssignment.type === 'Extra') {
+                oldFaculty.currentExtraLoad = Math.max(0, parseInt(String(oldFaculty.currentExtraLoad)) - contactHours);
+              } else {
+                oldFaculty.currentRegularLoad = Math.max(0, parseInt(String(oldFaculty.currentRegularLoad)) - contactHours);
+              }
+              await this.facultyRepo.save(oldFaculty);
+              
+              // Delete or deactivate the assignment
+              await this.assignmentRepo.remove(oldAssignment);
+            }
+          }
+        }
+
+        // If assigning to new faculty, add load
+        if (newFacultyId) {
+          const newFaculty = await this.facultyRepo.findOne({ where: { id: newFacultyId } });
+          if (!newFaculty) {
+            console.log('Faculty not found:', newFacultyId);
+            return res.status(400).json({ error: 'Faculty not found' });
+          }
+
+          // Check for conflicts if timeSlots are being updated
+          if (updatedTimeSlots && updatedTimeSlots.length > 0) {
+            console.log('Checking schedule conflicts for timeSlots:', updatedTimeSlots);
+            const conflicts = await this.checkScheduleConflicts(
+              newFacultyId, 
+              updatedTimeSlots, 
+              section.semester, 
+              section.academicYear,
+              id // Exclude current section from conflict check
+            );
+          if (conflicts.length > 0) {
+            const conflictDetails = conflicts
+              .map(c => `${c.conflictingSection || 'Unknown section'} (${c.conflictingCourse || 'Unknown course'}) day ${c.dayOfWeek} ${c.conflictingTime} vs requested ${c.requestedTime || 'n/a'}`)
+              .join('; ');
+            console.log('Schedule conflicts found:', conflicts);
+            return res.status(400).json({ 
+              error: 'Schedule conflicts detected',
+              message: `Schedule conflicts detected for faculty ${newFaculty.fullName || newFaculty.id}: ${conflictDetails}. Please resolve overlaps.`,
+              conflicts: conflicts 
+            });
+          }
+          }
+
+          // Check room conflicts for new faculty/timeSlots
+          if (updatedRoom && updatedTimeSlots && updatedTimeSlots.length > 0) {
+            const roomConflicts = await this.checkRoomConflicts(
+              updatedRoom,
+              updatedTimeSlots,
+              section.semester,
+              section.academicYear,
+              id
+            );
+            if (roomConflicts.length > 0) {
+              const conflictDetails = roomConflicts
+                .map(c => `${c.conflictingSection || 'Unknown section'} (${c.conflictingCourse || 'Unknown course'}) day ${c.dayOfWeek} ${c.conflictingTime} @ ${c.room}`)
+                .join('; ');
+              return res.status(400).json({
+                error: 'Room conflicts detected',
+                message: `Room conflicts detected for room ${updatedRoom}: ${conflictDetails}. Please pick a different room or time.`,
+                conflicts: roomConflicts
+              });
+            }
+          }
+
+          // Update faculty load
+          const contactHours = parseInt(String(course.contactHours || 0));
+          const courseCredits = parseInt(String(course.credits || 0));
+          
+          // Determine load type based on faculty type and time slot
+          let loadType: 'Regular' | 'Extra' = 'Regular';
+          
+          if (newFaculty.type === 'AdminFaculty') {
+            // Admin Faculty: All load is extra (part-time hours)
+            loadType = 'Extra';
+          } else if (newFaculty.type === 'Designee' && updatedTimeSlots && updatedTimeSlots.length > 0) {
+            // For designees, use time-based load categorization
+            const timeSlotLoadType = ConstraintService.getDesigneeLoadType(updatedTimeSlots[0]);
+            loadType = timeSlotLoadType as 'Regular' | 'Extra';
+          } else {
+            // For non-designees, use simplified logic
+            const isExtraLoad = newFaculty.currentRegularLoad >= 21;
+            loadType = isExtraLoad ? 'Extra' : 'Regular';
+          }
+          
+          if (loadType === 'Extra') {
+            newFaculty.currentExtraLoad = parseInt(String(newFaculty.currentExtraLoad)) + contactHours;
+          } else {
+            newFaculty.currentRegularLoad = parseInt(String(newFaculty.currentRegularLoad)) + contactHours;
+          }
+          
+          await this.facultyRepo.save(newFaculty);
+
+          // Create or update Assignment record
+          let assignment = await this.assignmentRepo.findOne({
+            where: {
+              facultyId: newFacultyId,
+              courseId: section.courseId,
+              semester: section.semester,
+              academicYear: section.academicYear,
+              sectionId: id
+            }
+          });
+
+          const finalTimeSlots = updatedTimeSlots || [];
+          if (!assignment) {
+            // Create new assignment
+            assignment = this.assignmentRepo.create({
+              facultyId: newFacultyId,
+              courseId: section.courseId,
+              sectionId: id,
+              type: loadType,
+              status: 'Active',
+              timeSlot: finalTimeSlots.length > 0 ? {
+                dayOfWeek: finalTimeSlots[0].dayOfWeek,
+                startTime: finalTimeSlots[0].startTime,
+                endTime: finalTimeSlots[0].endTime
+              } : {
+                dayOfWeek: 1,
+                startTime: '08:00',
+                endTime: '11:00'
+              },
+              semester: section.semester,
+              academicYear: section.academicYear,
+              section: section.sectionCode,
+              room: updatedRoom || '',
+              creditHours: courseCredits,
+              contactHours: contactHours,
+              lectureHours: parseInt(String(course.lectureHours || 0)),
+              laboratoryHours: parseInt(String(course.laboratoryHours || 0)),
+              approvedBy: 'System',
+              approvedAt: new Date(),
+              notes: `Auto-created from section assignment`
+            });
+          } else {
+            // Update existing assignment
+            assignment.type = loadType;
+            assignment.status = 'Active';
+            assignment.room = updatedRoom || '';
+            assignment.sectionId = id;
+            if (finalTimeSlots.length > 0) {
+              assignment.timeSlot = {
+                dayOfWeek: finalTimeSlots[0].dayOfWeek,
+                startTime: finalTimeSlots[0].startTime,
+                endTime: finalTimeSlots[0].endTime
+              };
+            }
+          }
+
+          await this.assignmentRepo.save(assignment);
+        }
+      } else if (newFacultyId) {
+        // Faculty not changing, but validate if provided
+        const faculty = await this.facultyRepo.findOne({ where: { id: newFacultyId } });
         if (!faculty) {
-          console.log('Faculty not found:', updateData.facultyId);
+          console.log('Faculty not found:', newFacultyId);
           return res.status(400).json({ error: 'Faculty not found' });
         }
 
         // Check for conflicts if timeSlots are being updated
-        const timeSlots = updateData.timeSlots || section.timeSlots;
-        if (timeSlots && timeSlots.length > 0) {
-          console.log('Checking schedule conflicts for timeSlots:', timeSlots);
+        if (updatedTimeSlots && updatedTimeSlots.length > 0) {
+          console.log('Checking schedule conflicts for timeSlots:', updatedTimeSlots);
           const conflicts = await this.checkScheduleConflicts(
-            updateData.facultyId, 
-            timeSlots, 
+            newFacultyId, 
+            updatedTimeSlots, 
             section.semester, 
             section.academicYear,
             id // Exclude current section from conflict check
           );
           if (conflicts.length > 0) {
+            const conflictDetails = conflicts
+              .map(c => `${c.conflictingSection || 'Unknown section'} (${c.conflictingCourse || 'Unknown course'}) day ${c.dayOfWeek} ${c.conflictingTime} vs requested ${c.requestedTime || 'n/a'}`)
+              .join('; ');
             console.log('Schedule conflicts found:', conflicts);
             return res.status(400).json({ 
               error: 'Schedule conflicts detected',
+              message: `Schedule conflicts detected for faculty ${faculty.fullName || faculty.id}: ${conflictDetails}. Please resolve overlaps.`,
               conflicts: conflicts 
             });
           }
+        }
+
+        // Check room conflicts
+        if (updatedRoom && updatedTimeSlots && updatedTimeSlots.length > 0) {
+          const roomConflicts = await this.checkRoomConflicts(
+            updatedRoom,
+            updatedTimeSlots,
+            section.semester,
+            section.academicYear,
+            id
+          );
+          if (roomConflicts.length > 0) {
+            const conflictDetails = roomConflicts
+              .map(c => `${c.conflictingSection || 'Unknown section'} (${c.conflictingCourse || 'Unknown course'}) day ${c.dayOfWeek} ${c.conflictingTime} @ ${c.room}`)
+              .join('; ');
+            return res.status(400).json({
+              error: 'Room conflicts detected',
+              message: `Room conflicts detected for room ${updatedRoom}: ${conflictDetails}. Please pick a different room or time.`,
+              conflicts: roomConflicts
+            });
+          }
+        }
+      }
+
+      // Update section status if faculty is being assigned
+      if (newFacultyId && !oldFacultyId) {
+        updateData.status = 'Assigned';
+      } else if (!newFacultyId && oldFacultyId) {
+        updateData.status = 'Planning';
+      }
+
+      // Check student schedule conflicts within the same section code if time slots changed/provided
+      if (updatedTimeSlots) {
+        const sectionCodeConflicts = await this.checkSectionCodeConflicts(
+          updateData.sectionCode || section.sectionCode,
+          updatedTimeSlots,
+          section.semester,
+          section.academicYear,
+          id
+        );
+        if (sectionCodeConflicts.length > 0) {
+          const details = sectionCodeConflicts
+            .map(c => `Day ${c.dayOfWeek} ${c.conflictingTime} with ${c.conflictingCourse || 'Unknown course'}`)
+            .join('; ');
+          return res.status(400).json({
+            error: 'Section schedule conflicts detected',
+            message: `Section ${section.sectionCode} has overlapping schedules: ${details}. Please adjust time slots.`,
+            conflicts: sectionCodeConflicts
+          });
         }
       }
 
@@ -393,6 +638,98 @@ export class SectionController {
                 conflictingSection: existingSection.sectionCode,
                 conflictingCourse: existingSection.course.name,
                 conflictingTime: `${existingSlot.startTime}-${existingSlot.endTime}`,
+                requestedTime: `${newSlot.startTime}-${newSlot.endTime}`,
+                dayOfWeek: existingSlot.dayOfWeek
+              });
+            }
+          }
+        }
+      }
+    }
+
+    return conflicts;
+  }
+
+  // Check for room conflicts across sections
+  private async checkRoomConflicts(
+    room: string | undefined,
+    timeSlots: any[] | undefined,
+    semester: string,
+    academicYear: string,
+    excludeSectionId?: string
+  ) {
+    if (!room || !timeSlots || timeSlots.length === 0) return [];
+
+    const conflicts: any[] = [];
+
+    let query = this.sectionRepo.createQueryBuilder('section')
+      .leftJoinAndSelect('section.course', 'course')
+      .where('section.room = :room', { room })
+      .andWhere('section.semester = :semester', { semester })
+      .andWhere('section.academicYear = :academicYear', { academicYear })
+      .andWhere('section.isActive = :isActive', { isActive: true });
+
+    if (excludeSectionId) {
+      query = query.andWhere('section.id != :excludeSectionId', { excludeSectionId });
+    }
+
+    const existingSections = await query.getMany();
+
+    for (const newSlot of timeSlots) {
+      for (const existingSection of existingSections) {
+        if (existingSection.timeSlots) {
+          for (const existingSlot of existingSection.timeSlots) {
+            if (this.timeSlotsOverlap(newSlot, existingSlot)) {
+              conflicts.push({
+                conflictingSection: existingSection.sectionCode,
+                conflictingCourse: existingSection.course?.name,
+                conflictingTime: `${existingSlot.startTime}-${existingSlot.endTime}`,
+                dayOfWeek: existingSlot.dayOfWeek,
+                room
+              });
+            }
+          }
+        }
+      }
+    }
+
+    return conflicts;
+  }
+
+  // Check for intra-section schedule conflicts (same sectionCode overlaps)
+  private async checkSectionCodeConflicts(
+    sectionCode: string,
+    timeSlots: any[] | undefined,
+    semester: string,
+    academicYear: string,
+    excludeSectionId?: string
+  ) {
+    if (!sectionCode || !timeSlots || timeSlots.length === 0) return [];
+
+    const conflicts: any[] = [];
+
+    let query = this.sectionRepo.createQueryBuilder('section')
+      .leftJoinAndSelect('section.course', 'course')
+      .where('section.sectionCode = :sectionCode', { sectionCode })
+      .andWhere('section.semester = :semester', { semester })
+      .andWhere('section.academicYear = :academicYear', { academicYear })
+      .andWhere('section.isActive = :isActive', { isActive: true });
+
+    if (excludeSectionId) {
+      query = query.andWhere('section.id != :excludeSectionId', { excludeSectionId });
+    }
+
+    const existingSections = await query.getMany();
+
+    for (const newSlot of timeSlots) {
+      for (const existingSection of existingSections) {
+        if (existingSection.timeSlots) {
+          for (const existingSlot of existingSection.timeSlots) {
+            if (this.timeSlotsOverlap(newSlot, existingSlot)) {
+              conflicts.push({
+                conflictingSection: existingSection.sectionCode,
+                conflictingCourse: existingSection.course?.name,
+                conflictingTime: `${existingSlot.startTime}-${existingSlot.endTime}`,
                 dayOfWeek: existingSlot.dayOfWeek
               });
             }
@@ -454,6 +791,72 @@ export class SectionController {
     return sectionsWithConflicts;
   }
 
+  // Get available rooms for a given day and time
+  getAvailableRooms = async (req: Request, res: Response) => {
+    try {
+      const { dayOfWeek, startTime, endTime, semester, academicYear, excludeSectionId } = req.query;
+
+      if (!dayOfWeek || !startTime || !endTime || !semester || !academicYear) {
+        return res.status(400).json({ 
+          error: 'Missing required parameters: dayOfWeek, startTime, endTime, semester, academicYear' 
+        });
+      }
+
+      const dayOfWeekNum = parseInt(dayOfWeek as string);
+      const startTimeStr = startTime as string;
+      const endTimeStr = endTime as string;
+      const semesterStr = semester as string;
+      const academicYearStr = academicYear as string;
+      const excludeId = excludeSectionId as string | undefined;
+
+      // Get all active rooms from Room management
+      const rooms = await this.roomRepo.find({
+        where: { isActive: true },
+        order: { code: 'ASC' },
+      });
+
+      if (!rooms || rooms.length === 0) {
+        return res.json({
+          availableRooms: [],
+          totalRooms: 0,
+          availableCount: 0,
+        });
+      }
+
+      const requestedSlot = {
+        dayOfWeek: dayOfWeekNum,
+        startTime: startTimeStr,
+        endTime: endTimeStr,
+      };
+
+      const availableRooms: string[] = [];
+
+      // For each active room, check if there are any conflicting sections
+      for (const room of rooms) {
+        const conflicts = await this.checkRoomConflicts(
+          room.code,
+          [requestedSlot],
+          semesterStr,
+          academicYearStr,
+          excludeId,
+        );
+
+        if (conflicts.length === 0) {
+          availableRooms.push(room.code);
+        }
+      }
+
+      res.json({
+        availableRooms,
+        totalRooms: rooms.length,
+        availableCount: availableRooms.length,
+      });
+    } catch (error) {
+      console.error('Get available rooms error:', error);
+      res.status(500).json({ error: 'Failed to get available rooms' });
+    }
+  };
+
   // Assign faculty to section directly
   assignFacultyToSection = async (req: Request, res: Response) => {
     try {
@@ -485,9 +888,35 @@ export class SectionController {
           sectionId
         );
         if (conflicts.length > 0) {
+          const conflictDetails = conflicts
+            .map(c => `${c.conflictingSection || 'Unknown section'} (${c.conflictingCourse || 'Unknown course'}) day ${c.dayOfWeek} ${c.conflictingTime} vs requested ${c.requestedTime || 'n/a'}`)
+            .join('; ');
           return res.status(400).json({
             error: 'Schedule conflicts detected',
+            message: `Schedule conflicts detected for faculty ${faculty.fullName || faculty.id}: ${conflictDetails}. Please resolve overlaps.`,
             conflicts: conflicts
+          });
+        }
+      }
+
+      // Check room conflicts if room/timeSlots exist
+      const roomToUse = room || section.room;
+      if (roomToUse && section.timeSlots && section.timeSlots.length > 0) {
+        const roomConflicts = await this.checkRoomConflicts(
+          roomToUse,
+          section.timeSlots,
+          section.semester,
+          section.academicYear,
+          sectionId
+        );
+        if (roomConflicts.length > 0) {
+          const conflictDetails = roomConflicts
+            .map(c => `${c.conflictingSection || 'Unknown section'} (${c.conflictingCourse || 'Unknown course'}) day ${c.dayOfWeek} ${c.conflictingTime} @ ${c.room}`)
+            .join('; ');
+          return res.status(400).json({
+            error: 'Room conflicts detected',
+            message: `Room conflicts detected for room ${roomToUse}: ${conflictDetails}. Please pick a different room or time.`,
+            conflicts: roomConflicts
           });
         }
       }
@@ -508,7 +937,10 @@ export class SectionController {
       // Determine load type based on faculty type and time slot
       let loadType: 'Regular' | 'Extra' = 'Regular';
       
-      if (faculty.type === 'Designee' && section.timeSlots && section.timeSlots.length > 0) {
+      if (faculty.type === 'AdminFaculty') {
+        // Admin Faculty: All load is extra (part-time hours)
+        loadType = 'Extra';
+      } else if (faculty.type === 'Designee' && section.timeSlots && section.timeSlots.length > 0) {
         // For designees, use time-based load categorization
         const timeSlotLoadType = ConstraintService.getDesigneeLoadType(section.timeSlots[0]);
         loadType = timeSlotLoadType as 'Regular' | 'Extra';
@@ -624,7 +1056,10 @@ export class SectionController {
         // Determine what type of load this was based on faculty type and time slot
         let wasExtraLoad = false;
         
-        if (section.faculty.type === 'Designee' && section.timeSlots && section.timeSlots.length > 0) {
+        if (section.faculty.type === 'AdminFaculty') {
+          // Admin Faculty: All load is extra (part-time hours)
+          wasExtraLoad = true;
+        } else if (section.faculty.type === 'Designee' && section.timeSlots && section.timeSlots.length > 0) {
           // For designees, check if this was part-time or Saturday (extra load)
           const timeSlotLoadType = ConstraintService.getDesigneeLoadType(section.timeSlots[0]);
           wasExtraLoad = timeSlotLoadType === 'Extra';

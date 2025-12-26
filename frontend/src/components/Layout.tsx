@@ -27,6 +27,7 @@ import {
   Assessment,
   AccountCircle,
   Logout,
+  MeetingRoom,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useAppDispatch } from '../hooks/redux';
@@ -67,6 +68,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     { text: 'Courses', icon: <School />, path: '/courses' },
     { text: 'Assignments', icon: <Assignment />, path: '/assignments' },
     { text: 'Sections', icon: <ViewList />, path: '/sections' },
+    { text: 'Rooms', icon: <MeetingRoom />, path: '/rooms' },
     { text: 'Schedule', icon: <CalendarMonth />, path: '/schedule' },
     { text: 'Reports', icon: <Assessment />, path: '/reports' },
   ];

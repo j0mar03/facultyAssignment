@@ -23,7 +23,7 @@ export class Faculty {
 
   @Column({
     type: 'enum',
-    enum: ['Regular', 'PartTime', 'Temporary', 'Designee'],
+    enum: ['Regular', 'PartTime', 'Temporary', 'Designee', 'AdminFaculty'],
   })
   type!: FacultyType;
 
