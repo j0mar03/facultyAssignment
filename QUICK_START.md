@@ -114,7 +114,8 @@ Update `.env` with cloud credentials.
 ## 📚 Full Documentation
 
 For detailed instructions, see:
-- [GITHUB_SETUP.md](./GITHUB_SETUP.md) - Complete GitHub setup guide
+- [SETUP_NEW_LAPTOP.md](./SETUP_NEW_LAPTOP.md) - **Complete step-by-step guide for new laptop setup**
 - [DATABASE_MIGRATION.md](./DATABASE_MIGRATION.md) - Transfer database between laptops
+- [GITHUB_SETUP.md](./GITHUB_SETUP.md) - Complete GitHub setup guide
 - [README.md](./README.md) - Project documentation
 

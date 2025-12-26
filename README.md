@@ -221,7 +221,13 @@ faculty-load-management/
 - `GET /api/reports/compliance` - Compliance report
 - `GET /api/reports/export/monitoring-sheet` - Export monitoring sheet
 
-## Getting Started with GitHub
+## Getting Started
+
+### Setting Up on a New Laptop
+
+For a complete step-by-step guide to set up this project on a new laptop with your existing database data, see [SETUP_NEW_LAPTOP.md](./SETUP_NEW_LAPTOP.md).
+
+### GitHub Setup
 
 For detailed instructions on uploading this project to GitHub and setting up the database, see [GITHUB_SETUP.md](./GITHUB_SETUP.md).
 
