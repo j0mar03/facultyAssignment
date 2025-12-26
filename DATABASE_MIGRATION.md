@@ -9,6 +9,17 @@ This is the easiest and most reliable method. It creates a SQL file with all you
 ### On Windows Laptop (Source)
 
 **Easy Way (Using Script):**
+
+**For WSL/Linux:**
+```bash
+# Make scripts executable (first time only)
+chmod +x backup-database.sh restore-database.sh
+
+# Run backup script
+./backup-database.sh
+```
+
+**For Windows (PowerShell/CMD):**
 1. Double-click `backup-database.bat` in the project root
 2. The script will automatically create a timestamped backup in `database-backup/` folder
 3. Transfer the backup file to your new laptop
@@ -83,7 +94,18 @@ This is the easiest and most reliable method. It creates a SQL file with all you
 
 5. **Restore the database:**
    
-   **Easy Way (Windows - Using Script):**
+   **Easy Way (Using Script):**
+   
+   **For WSL/Linux:**
+   ```bash
+   # Run restore script with backup file
+   ./restore-database.sh database-backup/faculty_load_backup.sql
+   
+   # Or run without arguments to see available backups
+   ./restore-database.sh
+   ```
+   
+   **For Windows:**
    - Double-click `restore-database.bat` and follow the prompts
    - Or drag and drop the backup file onto `restore-database.bat`
    
@@ -236,31 +258,32 @@ docker logs faculty_load_postgres
 docker exec faculty_load_postgres pg_dump -U postgres -d faculty_load_db -v > backup.sql
 ```
 
-## Automated Backup Script
+## Automated Backup Scripts
 
-Create a `backup-database.sh` (Linux/Mac) or `backup-database.bat` (Windows) for easy backups:
+The project includes ready-to-use backup and restore scripts:
 
-### Windows (backup-database.bat)
-```batch
-@echo off
-echo Creating database backup...
-docker exec faculty_load_postgres pg_dump -U postgres -d faculty_load_db --clean --if-exists > database-backup\backup_%date:~-4,4%%date:~-10,2%%date:~-7,2%_%time:~0,2%%time:~3,2%%time:~6,2%.sql
-echo Backup completed!
-pause
-```
+### For WSL/Linux/Mac
+- `backup-database.sh` - Creates timestamped backups
+- `restore-database.sh` - Restores from backup files
 
-### Linux/Mac (backup-database.sh)
+**Usage:**
 ```bash
-#!/bin/bash
-BACKUP_DIR="database-backup"
-TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-BACKUP_FILE="$BACKUP_DIR/backup_$TIMESTAMP.sql"
+# Make executable (first time only)
+chmod +x backup-database.sh restore-database.sh
 
-mkdir -p $BACKUP_DIR
-echo "Creating database backup..."
-docker exec faculty_load_postgres pg_dump -U postgres -d faculty_load_db --clean --if-exists > $BACKUP_FILE
-echo "Backup completed: $BACKUP_FILE"
+# Create backup
+./backup-database.sh
+
+# Restore backup
+./restore-database.sh database-backup/faculty_load_backup_20240101_120000.sql
 ```
+
+### For Windows
+- `backup-database.bat` - Creates timestamped backups
+- `restore-database.bat` - Restores from backup files
+
+**Usage:**
+- Double-click the `.bat` files, or run from Command Prompt
 
 ## Best Practices
 

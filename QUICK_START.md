@@ -45,6 +45,15 @@ docker-compose up -d
 docker ps
 ```
 
+### Database Backup & Restore (WSL/Linux)
+```bash
+# Create backup
+./backup-database.sh
+
+# Restore backup
+./restore-database.sh database-backup/faculty_load_backup_YYYYMMDD_HHMMSS.sql
+```
+
 ### Option 2: Local PostgreSQL
 ```bash
 # Create database
