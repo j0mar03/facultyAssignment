@@ -128,8 +128,8 @@ The schema includes the following tables:
 # Using pg_dump
 pg_dump -U postgres -d faculty_load_db > backup.sql
 
-# Or using Docker
-docker exec faculty_load_postgres pg_dump -U postgres faculty_load_db > backup.sql
+# Or using Docker (recommended)
+docker exec faculty_load_postgres pg_dump -U postgres -d faculty_load_db --clean --if-exists > backup.sql
 ```
 
 **Restore:**
@@ -137,9 +137,12 @@ docker exec faculty_load_postgres pg_dump -U postgres faculty_load_db > backup.s
 # Restore from backup
 psql -U postgres -d faculty_load_db < backup.sql
 
-# Or using Docker
-docker exec -i faculty_load_postgres psql -U postgres faculty_load_db < backup.sql
+# Or using Docker (recommended)
+docker exec -i faculty_load_postgres psql -U postgres -d faculty_load_db < backup.sql
 ```
+
+**Transfer Database to Another Laptop:**
+For detailed instructions on transferring your database data between laptops, see [DATABASE_MIGRATION.md](./DATABASE_MIGRATION.md).
 
 ## Project Structure
 
